@@ -1,0 +1,3685 @@
+USE [MCRT]
+GO
+/****** Object:  StoredProcedure [dbo].[Add_Update_MetricWiseRiskAppetiteLimit]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Procedure [dbo].[Add_Update_MetricWiseRiskAppetiteLimit]
+@RasMetricId int,
+@WeekKey varchar(50),
+@MetricWiseRiskAppetiteLimit_xmlstr ntext,
+@CreatedBy varchar(50)=null,
+@Error int = null Output
+as
+begin
+SET @Error=0;
+ -- =============================================
+-- Author:		Rohit Rustagi
+-- Create date: 05/07/2017
+-- Description:	Procedure to Add-Update a RasMetric
+-- =============================================
+Declare @hDoc int;
+Declare @Iterator int, @TotalRows int;
+exec sp_xml_preparedocument @hDoc OUTPUT,@MetricWiseRiskAppetiteLimit_xmlstr
+
+select ROW_NUMBER() over (order by xml.RasConditionId ASC) as RowId,
+xml.RasConditionId,xml.RasMetricId,xml.RA_Red_Opt1,xml.RA_Red_Val1,xml.RA_Red_Opt2,xml.RA_Red_Val2,
+	xml.RA_Amber_Opt1,xml.RA_Amber_Val1,xml.RA_Amber_Opt2,xml.RA_Amber_Val2,xml.RA_Green_Opt1,
+	xml.RA_Green_Val1,xml.RA_Green_Opt2,xml.RA_Green_Val2,xml.Records_Opt1,xml.Records_Val1,
+	xml.Records_Opt2,xml.Records_Val2,xml.Remark,xml.IsActive,@WeekKey as WeekKey
+	into #tempMetricWiseRiskAppetiteLimit
+    from OPENXML(@hDoc,'MetricWiseRiskAppetiteLimit/MetricRiskAppetiteLimit',2)
+    with(RasConditionId int,
+         RasMetricId int,
+		 RA_Red_Opt1 int,
+		 RA_Red_Val1 float,
+		 RA_Red_Opt2 int,
+		 RA_Red_Val2 float,
+		 RA_Amber_Opt1 int,
+		 RA_Amber_Val1 float,
+		 RA_Amber_Opt2 int,
+		 RA_Amber_Val2 float,
+		 RA_Green_Opt1 int,
+		 RA_Green_Val1 float,
+		 RA_Green_Opt2 int,
+		 RA_Green_Val2 float,
+		 Records_Opt1 int,
+		 Records_Val1 int,
+		 Records_Opt2 int,
+		 Records_Val2 int,
+		 Remark varchar(255),IsActive int)xml
+exec sp_xml_removedocument @hDoc 
+
+update #tempMetricWiseRiskAppetiteLimit 
+set RasMetricId=@RasMetricId
+where ISNULL(RasMetricId,0)=0;
+
+--select * from #tempMetricWiseRiskAppetiteLimit
+ Set @Iterator=1;
+	  Select @TotalRows=count(*) from #tempMetricWiseRiskAppetiteLimit;
+	  set @TotalRows=isnull(@TotalRows,0);
+	  DEclare @RasConditionId int,         
+		 @RA_Red_Opt1 int,
+		 @RA_Red_Val1 float,
+		 @RA_Red_Opt2 int,
+		 @RA_Red_Val2 float,
+		 @RA_Amber_Opt1 int,
+		 @RA_Amber_Val1 float,
+		 @RA_Amber_Opt2 int,
+		 @RA_Amber_Val2 float,
+		 @RA_Green_Opt1 int,
+		 @RA_Green_Val1 float,
+		 @RA_Green_Opt2 int,
+		 @RA_Green_Val2 float,
+		 @Records_Opt1 int,
+		 @Records_Val1 int,
+		 @Records_Opt2 int,
+		 @Records_Val2 int,
+		 @Remark varchar(255),
+		 @IsActive int,@WKey varchar(50)
+
+	  WHILE (@Iterator <= @TotalRows)
+BEGIN
+select @RasConditionId =RasConditionId,        
+		 @RA_Red_Opt1 =RA_Red_Opt1,
+		 @RA_Red_Val1 =RA_Red_Val1,
+		 @RA_Red_Opt2 =RA_Red_Opt2,
+		 @RA_Red_Val2 =RA_Red_Val2,
+		 @RA_Amber_Opt1 =RA_Amber_Opt1,
+		 @RA_Amber_Val1 =RA_Amber_Val1,
+		@RA_Amber_Opt2 =RA_Amber_Opt2,
+		 @RA_Amber_Val2 =RA_Amber_Val2,
+		 @RA_Green_Opt1 =RA_Green_Opt1,
+		 @RA_Green_Val1 =RA_Green_Val1,
+		 @RA_Green_Opt2 =RA_Green_Opt2,
+		 @RA_Green_Val2 =RA_Green_Val2,
+		 @Records_Opt1 =Records_Opt1,
+		 @Records_Val1 =Records_Val1,
+		 @Records_Opt2 =Records_Opt2,
+		 @Records_Val2 =Records_Val2,
+		 @Remark =Remark,@IsActive=IsActive,
+		 @WKey=WeekKey
+		 from #tempMetricWiseRiskAppetiteLimit where 
+		 RasMetricId=@RasMetricId and RowId=@Iterator;
+
+		 if exists(select top 1 1 from tblMetricWiseRiskAppetiteLimit 
+		 where contentid =@RasConditionId and ISNULL(WeekKey,'')=Isnull(@WKey,''))
+		 begin
+
+		 --update Condition
+		 update tbl set tbl.RA_Red_Opt1=@RA_Red_Opt1,
+		 tbl.RA_Red_Val1=@RA_Red_Val1,tbl.RA_Red_Opt2=@RA_Red_Opt2,
+		 tbl.RA_Red_Val2=@RA_Red_Val2,
+		 tbl.RA_Amber_Opt1=@RA_Amber_Opt1,
+		 tbl.RA_Amber_Val1=@RA_Amber_Val1,
+		 tbl.RA_Amber_Opt2=@RA_Amber_Opt2,
+		 tbl.RA_Amber_Val2=@RA_Amber_Val2,
+		 tbl.RA_Green_Opt1=@RA_Green_Opt1,
+		 tbl.RA_Green_Val1=@RA_Green_Val1,
+		 tbl.RA_Green_Opt2=@RA_Green_Opt2,
+		 tbl.RA_Green_Val2=@RA_Green_Val2,
+		 tbl.Records_Opt1=@Records_Opt1,
+		 tbl.Records_Val1=@Records_Val1,
+		 tbl.Records_Opt2=@Records_Opt2,
+		 tbl.Records_Val2=@Records_Val2,
+		 tbl.Remark=@Remark,
+		 tbl.IsActive=Isnull(@IsActive,tbl.IsActive),
+		 tbl.ModifiedDate=GETUTCDATE(),tbl.ModifiedBy=@CreatedBy 
+		  from tblMetricWiseRiskAppetiteLimit tbl 
+		 where tbl.ContentId=@RasConditionId and 
+		 ISNULL(tbl.WeekKey,'')=Isnull(@WKey,'');
+		  
+		 ------------------
+		 end
+		 else
+		 begin
+		 --add condition
+		 insert into tblMetricWiseRiskAppetiteLimit(
+		 RasMetricId,
+		 [RA_Red_Opt1]
+      ,[RA_Red_Val1]
+      ,[RA_Red_Opt2]
+      ,[RA_Red_Val2]
+      ,[RA_Amber_Opt1]
+      ,[RA_Amber_Val1]
+      ,[RA_Amber_Opt2]
+      ,[RA_Amber_Val2]
+      ,[RA_Green_Opt1]
+      ,[RA_Green_Val1]
+      ,[RA_Green_Opt2]
+      ,[RA_Green_Val2]
+      ,[Records_Opt1]
+      ,[Records_Val1]
+      ,[Records_Opt2]
+      ,[Records_Val2]
+      ,[Remark]
+      ,[CreatedBy],[WeekKey])
+	  values(@RasMetricId,@RA_Red_Opt1,@RA_Red_Val1,@RA_Red_Opt2,
+	  @RA_Red_Val2,@RA_Amber_Opt1,@RA_Amber_Val1,@RA_Amber_Opt2,
+	  @RA_Amber_Val2,@RA_Green_Opt1,@RA_Green_Val1,@RA_Green_Opt2,
+	  @RA_Green_Val2,@Records_Opt1,@Records_Val1,
+	  @Records_Opt2,@Records_Val2,@Remark,@CreatedBy,@WKey);
+
+	  set @RasConditionId=SCOPE_IDENTITY();
+		 -----------------
+		 end
+		 Set @Iterator = @Iterator + 1;
+END
+drop table #tempMetricWiseRiskAppetiteLimit;
+SET @Error=1;
+end  
+GO
+/****** Object:  StoredProcedure [dbo].[ADDMetricComments]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  CREATE PROC [dbo].[ADDMetricComments]
+  @RasMetricId int,
+  @Comment nvarchar(512),
+  @ParentCommentId int=0,
+  @CreatedBy varchar(50),
+  @Error int = null Out,
+@ErrorMsg varchar(512) =null Out
+  AS
+  BEGIN
+  INSERT into tblMetricWiseComments(RasMetricId,Comment,CreatedBy,ParentCommentId)
+  select @RasMetricId,@Comment,@CreatedBy,@ParentCommentId;
+  set @Error=0;
+  set @ErrorMsg='Added Successfully';
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[AddUpdateMaterialRiskSummary]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[AddUpdateMaterialRiskSummary] 
+@MaterialRiskId int,
+@ZoneContextId int,
+@RegionId int,
+@SLTId int,
+@MonthKey varchar(50),
+@ActionSummary ntext,
+@CreatedBy varchar(50)=null,
+@Error int = null Out,
+@ErrorMsg varchar(512) =null Out
+AS
+BEGIN
+ -- =============================================
+-- Author:		Rohit Rustagi
+-- Create date: 24/07/2017
+-- Description:	Procedure to Update a Material-Risk Summary
+-- =============================================
+SET @Error =0;
+SET @ErrorMsg='Updated Successfully'; 
+if(Isnull(@MaterialRiskId,0)=0)
+begin
+SET @Error=1; ----''Material Risk not provided'
+SET @ErrorMsg='Material Risk Not Provided';
+end
+else if(@ZoneContextId is null)
+begin
+SET @Error=1; ----''Material Risk not provided'
+SET @ErrorMsg='Zone Context Info Not Provided';
+end
+else if(@RegionId is null)
+begin
+SET @Error=1; ----''Material Risk not provided'
+SET @ErrorMsg='Region Info Not Provided';
+end
+else if(@SLTId is null)
+begin
+SET @Error=1; ----''Material Risk not provided'
+SET @ErrorMsg='SLT Info Not Provided';
+end
+-----Update
+if(@Error=0) --- no error
+begin
+if exists(select top 1 1 from 
+tblMaterialRiskActionSummary where 
+MaterialRiskId=@MaterialRiskId and 
+Isnull(ZoneContextId,0) = Isnull(@ZoneContextId,0)
+and Isnull(RegionId,0) = Isnull(@RegionId,0)
+and Isnull(SLTId,0) = Isnull(@SLTId,0)
+and Isnull(MonthKey,'')=Isnull(@MonthKey,''))
+begin
+update MRS set MRS.ActionSummary=@ActionSummary,
+MRS.ModifiedBy=@CreatedBy,
+MRS.ModifiedDate=GETUTCDATE() from tblMaterialRiskActionSummary MRS
+where MRS.MaterialRiskId=@MaterialRiskId 
+and Isnull(MRS.ZoneContextId,0) = Isnull(@ZoneContextId,0)
+and Isnull(MRS.RegionId,0) = Isnull(@RegionId,0)
+and Isnull(MRS.SLTId,0) = Isnull(@SLTId,0)
+and Isnull(MRS.MonthKey,'')=Isnull(@MonthKey,'');
+end
+else
+begin
+Insert into tblMaterialRiskActionSummary([MaterialRiskId]
+      ,[ZoneContextId]
+      ,[RegionId]
+      ,[SLTId]
+      ,[MonthKey]
+      ,[ActionSummary]
+      ,[CreatedBy]
+      ,[CreatedDate])
+	  SELECT @MaterialRiskId,Isnull(@ZoneContextId,0)
+	  ,Isnull(@RegionId,0),Isnull(@SLTId,0),Isnull(@MonthKey,''),
+	  @ActionSummary,@CreatedBy,GETUTCDATE();
+end
+end
+-----------------------------------
+Print @ErrorMsg;
+-----------------------------END Of Update a Material-Risk Summary ----
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetAvailableMaterialRisks]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetAvailableMaterialRisks] --  GetAvailableMaterialRisks 2,0,5
+@ZoneContextId int,
+@RegionId int,
+@SLTId int 
+AS
+BEGIN
+
+SELECT MR.ContentId as MaterialRiskId,
+MR.Name as MaterialRiskName,
+MRA.IsActive 
+from tblmaterialRiskAvailability MRA join 
+tblMaterialRisks MR on MRA.MaterialRiskId=MR.ContentId 
+where Isnull(MRA.ZoneContextid,0) = Isnull(@ZoneContextid,0)
+and Isnull(MRA.RegionId,0) = Isnull(@RegionId,0)
+and Isnull(MRA.SLTId,0) = Isnull(@SLTId,0) and Isnull(MRA.Isactive,0) =1
+group by  MR.ContentId,MR.Name,MRA.IsActive
+order by 1
+
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetEditMaterialRiskActionSummaryViewModel]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetEditMaterialRiskActionSummaryViewModel] --- GetEditMaterialRiskActionSummaryViewModel
+AS
+BEGIN
+Create Table #tempMonthDim(MonthKey varchar(50),MonthLabel varchar(50))
+if exists (Select  top 1 1 from tblMonthDim mDim 
+join tblmaterialriskactionsummary mrs on mDim.mKey = Isnull(mrs.monthkey,'')
+where Isnull(mrs.ZoneContextid,0) = 0
+and isnull(mrs.RegionId,0)=0
+and isnull(mrs.SLTId,0) =0)
+begin
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim 
+join tblmaterialriskactionsummary mrs on mDim.mKey = Isnull(mrs.monthkey,'')
+where Isnull(mrs.ZoneContextid,0) = 0
+and isnull(mrs.RegionId,0)=0
+and isnull(mrs.SLTId,0) =0
+order by mDim.mkey asc
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim 
+where mDim.mKey>(select top 1 MonthKey from #tempMonthDim)
+order by mDim.mkey asc
+end
+else
+begin
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim where 
+mDim.mKey=(select 
+top 1 mkey from tblmonthdim 
+where mkey=replace(convert(varchar(7),getutcdate(),126),'-',''))
+end
+select * from #tempMonthDim
+drop table #tempMonthDim;
+/*Material Risks*/
+EXEC GetAvailableMaterialRisks @ZoneContextId=0,@RegionId=0,@SLTId=0;
+/*Regions*/
+EXEC GetRegions
+/*SLTs*/
+EXEC GetSLTs
+/*end of SLTs*/
+end
+GO
+/****** Object:  StoredProcedure [dbo].[GetExecutiveSummary]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetExecutiveSummary] --GetExecutiveSummary 0,0,0,'201706'
+@ZoneContextId int,
+@RegionId int,
+@SLTId int,
+@MonthKey varchar(50)
+AS
+BEGIN
+Declare @ZoneContext varchar(128),@RegionName varchar(128),
+@SLTName varchar(128), @TargettedWeekKey Varchar(50);
+if(isnull(@ZoneContextId,0)>0)
+begin
+select @ZoneContext = ContextName from tblZoneContextMaster
+where ContextId=@ZoneContextId;
+if(isnull(@RegionId,0)>0)
+begin
+select @RegionName = Region from tblRegion
+where RegionId=@RegionId;
+end
+if(isnull(@SLTId,0)>0)
+begin
+select @SLTName = SLTName from tblSLTs
+where ContentId=@SLTId;
+end
+if(isnull(@ZoneContextId,0)=1 and len(Isnull(@RegionName,''))>0)
+begin
+set @ZoneContext = @ZoneContext + ' : ' + @RegionName;
+end
+else if(isnull(@ZoneContextId,0)=2 and len(Isnull(@SLTName,''))>0)
+begin
+set @ZoneContext = @ZoneContext + ' : ' + @SLTName;
+end
+else if(isnull(@ZoneContextId,0)=3 and len(Isnull(@SLTName,''))>0 and len(Isnull(@RegionName,''))>0)
+begin
+set @ZoneContext = 'Region' + ' : ' + @RegionName + ', SLT : ' + @SLTName;
+end
+end
+Else
+begin
+SET @ZoneContext='Global';
+end
+/*Set targetted week key*/
+  Select top 1 @TargettedWeekKey= Isnull(RMP.weekKey,'')  
+  from tblRasMetricPerformance RMP join tblRASMetrics RM 
+on RMP.RasmetricId=RM.ContentId
+join tblWeekDimUK wDim on Isnull(RMP.WeekKey,'')=wDim.wKey
+where ISNULL(RMP.IsActive,0)=1 
+and Isnull(RM.ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RM.RegionId,0) = isnull(@RegionId,0)
+and Isnull(RM.SLTId,0) = isnull(@SLTId,0)
+and wDim.mKey=Isnull(@MonthKey,'')
+order by Isnull(RMP.weekKey,'') desc;
+/*CEC Grid*/
+Select RM.MaterialRiskId,Mr.Name AS MaterialRiskName,
+RM.RiskThemeId,RT.ShortLabel as RiskThemeName,
+Isnull((select top 1
+Isnull(cast(CE_Rating as decimal(10,2)),0) from tblMaterialRiskPerformance 
+where MaterialRiskId=RM.MaterialRiskId
+and Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)  
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0) and isnull(monthkey,'')=Isnull(@MonthKey,'')),0)
+ as CEC_MR,
+ Isnull((select top 1
+Isnull(cast(CE_Rating as decimal(10,2)),0) from tblMaterialWiseRiskThemePerformance 
+where MaterialRiskId=RM.MaterialRiskId and riskthemeid=RM.RiskThemeId
+and Isnull(ZoneContextid,0) = isnull(@ZoneContextid,0)  
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0) and isnull(Monthkey,'')=Isnull(@MonthKey,'')),0)
+ as CEC_MWRT,
+  Isnull((select top 1
+Isnull(cast(CE_Rating as decimal(10,2)),0) from tblMaterialWiseRiskThemePerformance 
+where MaterialRiskId=RM.MaterialRiskId and riskthemeid=RM.RiskThemeId
+and Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)  
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0) and isnull(Monthkey,'')<Isnull(@MonthKey,'')
+order by isnull(Monthkey,'') desc),0)
+as CEC_MWRT_Last
+from tblRasMetricPerformance RMP join tblRASMetrics RM 
+on RMP.RasmetricId=RM.ContentId 
+join tblMaterialRisks MR on RM.MaterialRiskId=MR.ContentId
+join tblRiskThemes RT on RM.RiskThemeId=RT.ContentId 
+where Isnull(RM.ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RM.RegionId,0) = isnull(@RegionId,0)
+and Isnull(RM.SLTId,0) = isnull(@SLTId,0) and Isnull(RMP.Isactive,0) !=2
+and ISNULL(RMP.WeekKey,'') =ISNULL(@TargettedWeekKey,'')
+Group by  RM.MaterialRiskId,Mr.Name,
+RM.RiskThemeId,RT.ShortLabel
+/*MaterialRiskPerformance For CurrentMonth*/
+Select RM.MaterialRiskId,Mr.Name AS MaterialRiskName,
+MR.RA_Owner as OwnerName,
+Isnull((select top 1
+Isnull(cast(CE_Rating as decimal(10,2)),0) from tblMaterialRiskPerformance 
+where MaterialRiskId=RM.MaterialRiskId
+and Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)  
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0) and
+isnull(Monthkey,'')=Isnull(@MonthKey,'')),0)
+ as CEC_MR,
+ Isnull((select top 1
+Isnull(cast(CE_Rating as decimal(10,2)),0) from tblMaterialRiskPerformance 
+where MaterialRiskId=RM.MaterialRiskId
+and Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)  
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0) and
+isnull(Monthkey,'')<Isnull(@MonthKey,'') 
+order by isnull(Monthkey,'') desc),0)
+ as CEC_MR_Last,
+CASE Isnull(MR.MI_Completeness_Quality,0)
+when 1 then 'High'
+when 2 then 'Medium'
+when 3 then 'Low'
+Else '--' END  as MI_Completeness_Quality
+from tblRasMetricPerformance RMP join tblRASMetrics RM 
+on RMP.RasmetricId=RM.ContentId 
+join tblMaterialRisks MR on RM.MaterialRiskId=MR.ContentId
+where Isnull(RM.ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RM.RegionId,0) = isnull(@RegionId,0)
+and Isnull(RM.SLTId,0) = isnull(@SLTId,0) and Isnull(RMP.Isactive,0) =1
+and ISNULL(RMP.WeekKey,'') =ISNULL(@TargettedWeekKey,'')
+Group by  RM.MaterialRiskId,Mr.Name,
+MR.RA_Owner,CASE Isnull(MR.MI_Completeness_Quality,0)
+when 1 then 'High'
+when 2 then 'Medium'
+when 3 then 'Low'
+Else '--' END
+/*NWM Tech CEC LOG - Last 6 Months*/
+Select top 6  md.mKey as MonthKey,Isnull(cast(tmp.CE_Rating as decimal(10,2)),0) as CE_Rating,
+md.Format1,md.Format2
+ from  tblMonthDim md left outer join  tblNWMCECLog tmp
+on md.mKey=isnull(tmp.monthkey,'')
+where md.mKey <=Isnull(@MonthKey,'')
+and Isnull(tmp.ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(tmp.RegionId,0) = isnull(@RegionId,0)
+and Isnull(tmp.SLTId,0) = isnull(@SLTId,0)
+order by md.mKey asc 
+/*Risk Profile*/
+select * from tblRiskProfile 
+where Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0)
+and ISNULL(MonthKey,'') =ISNULL(@MonthKey,'')
+/*Internal / External Call outs and Important Note*/
+select ImportantNote,InternalCallOuts,ExternalCallOuts
+ from tblExecutiveSummaryNotes_CallOuts
+where Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0)
+and ISNULL(MonthKey,'') =ISNULL(@MonthKey,'')
+/*ZoneContext*/
+select @ZoneContext as ZoneContext,ISNULL(@MonthKey,'') as CurrentMonthKey,
+(select Isnull(cast(CE_Rating as decimal(10,2)),0)
+from tblNWMCECLog where monthkey=ISNULL(@MonthKey,'') and 
+Isnull(ZoneContextid,0) = isnull(@ZoneContextId,0)
+and Isnull(RegionId,0) = isnull(@RegionId,0)
+and Isnull(SLTId,0) = isnull(@SLTId,0)) as CurrentMonthCEC
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetExecutiveSummaryForRAS]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ CREATE PROC [dbo].[GetExecutiveSummaryForRAS] -- GetExecutiveSummaryForRAS 0,0,0,'201706'
+ @ZoneContextId int,
+  @RegionId int,
+  @SLTId int,
+  @MonthKey varchar(50)
+  AS
+  BEGIN
+  Select SummaryId,
+  FilePath,[FileName] from [tblExecSummaryPapersRAS]
+  where Isnull(ZoneContextId,0)= Isnull(@ZoneContextId,0)
+  and Isnull(RegionId,0)= Isnull(@RegionId,0)
+  and ISNULL(SLTId,0)= ISNULL(@SLTId,0)
+  and Isnull(MonthKey,'') = Isnull(@MonthKey,'');
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetExecutiveSummaryForRASView]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetExecutiveSummaryForRASView]
+  AS
+  BEGIN  
+  Declare @MonthKey varchar(50)='';
+  Select distinct Top 12 tmp.mKey as MonthKey,
+  tmp.Format1,tmp.Format2 into #tempData
+   From tblMonthDim tmp 
+  join [tblExecSummaryPapersRAS] ter on tmp.mKey=ISnull(ter.MonthKey,'')
+  Order By 1 desc 
+  select * from #tempData order by 1 desc;
+  Select top 1 @MonthKey=MonthKey from #tempData order by MonthKey desc;
+  EXEC GetExecutiveSummaryForRAS @ZoneContextId=0,
+  @RegionId=0,@SLTId=0,@MonthKey=@MonthKey;
+  Drop Table #tempData;
+  /*Regions*/
+EXEC GetRegions
+/*SLTs*/
+EXEC GetSLTs
+/*end of SLTs*/
+  END
+
+GO
+/****** Object:  StoredProcedure [dbo].[GetFilterHeadForRASDashboard]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetFilterHeadForRASDashboard]
+AS
+BEGIN
+/*Reported Weeks*/
+SELECT  Isnull(RMP.weekKey,'')   as WeekKey,wDim.WeekLabel
+  from tblRasMetricPerformance RMP join tblRASMetrics RM 
+on RMP.RasmetricId=RM.ContentId join tblWeekDimUK wDim on Isnull(RMP.weekKey,'')=wDim.wKey
+where ISNULL(RMP.IsActive,0)=1 
+group by Isnull(RMP.weekKey,''),wDim.WeekLabel
+order by Isnull(RMP.weekKey,'') desc
+/*Material Risks*/
+EXEC GetAvailableMaterialRisks @ZoneContextId=0,@RegionId=0,@SLTId=0;
+/*Regions*/
+EXEC GetRegions
+/*SLTs*/
+EXEC GetSLTs
+/*end of SLTs*/
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[GetLoggedInUser]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetLoggedInUser] --- GetLoggedInUser 'FM\guptpht'
+@RacfId varchar(50)
+AS
+BEGIN
+DECLARE @UserId int;
+if  not exists (select top 1 1 from tblMCRTUsers where lower(LTRIM(rtrim(RacfId))) =lower(LTRIM(rtrim(@RacfId))))
+begin
+insert into tblMCRTUsers (RacfId,IsMCPTeamMember,IsActive)
+Select @RacfId,0,1;
+SET @UserId = SCOPE_IDENTITY();
+if(Isnull(@UserId,0)>0)
+BEGIN
+Insert into tblUserRoles(UserId,RoleId,IsActive)
+Select @UserId,2,1;
+END
+end
+select ContentId as UserId,RacfId,ISNULL(IsMCPTeamMember,0) as IsMCPTeamMember,
+ISNULL(IsActive,0) as IsActive  from tblMCRTUsers
+ where lower(LTRIM(rtrim(RacfId))) =lower(LTRIM(rtrim(@RacfId)));
+select tmp.ContentId as UserRoleId,tmp.RoleId,t.RoleType from tblMCRTUsers tu join tblUserRoles tmp 
+on tu.ContentId=tmp.UserId and Isnull(tmp.IsActive,0)=1 
+join tblRoleMaster t  on tmp.RoleId=t.RoleId and Isnull(t.IsActive,0)=1 
+Where lower(LTRIM(rtrim(tu.RacfId))) =lower(LTRIM(rtrim(@RacfId)))
+order by 1;
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetLogicalOperators]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  CREATE PROC [dbo].[GetLogicalOperators]
+  AS
+  BEGIN
+  Select ContentId as Id, Operator 
+  from tblLogicalOperators;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetMasterTablesForRAS]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ CREATE Proc [dbo].[GetMasterTablesForRAS]
+AS
+BEGIN
+  ----tblRiskRating
+  EXEC GetRiskRatings;
+  ---------------
+  ----tblRags
+  EXEC GetRagMaster;
+  -------------
+  ---MaterialRisks
+  EXEC GetMaterialRisks;
+  -------------------------
+  ---RiskThemes 
+  EXEC GetRiskThemes;
+  ---------------
+  ----LogicalOperators
+  EXEC GetLogicalOperators;
+  --------------------
+  ---Risk Appetite Type of Dimensions 
+  EXEC GetMetricDimensions
+  -------------------------------------
+  ---Regions-----
+  EXEC GetRegions;
+  ---------------
+  ---SLTs-----
+  EXEC GetSLTs;
+  ---------------
+  ----Zone - Contexts ---------
+  EXEC GetZoneContexts
+  ----------------------------
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetMaterialRiskActionSummary]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetMaterialRiskActionSummary] ---[GetMaterialRiskActionSummary] 1,0,0,0,'201706'
+@MaterialRiskId int,
+@ZoneContextId int,
+@RegionId int,
+@SLTId int,
+@MonthKey varchar(50)
+AS
+BEGIN
+SELECT MR.ContentId as MaterialRiskId,
+MR.Name as MaterialRiskName,Isnull(MR.IsActive,0) as IsActive,
+MRS.ActionSummary 
+from tblMaterialRisks MR left outer join  tblMaterialRiskActionSummary MRS on MR.ContentId=MRS.MaterialRiskId
+and Isnull(MRS.ZoneContextId,0) = Isnull(@ZoneContextId,0)
+and Isnull(MRS.RegionId,0) = Isnull(@RegionId,0)
+and Isnull(MRS.SLTId,0) = Isnull(@SLTId,0)
+and Isnull(MRS.MonthKey,'')=Isnull(@MonthKey,'')
+WHERE MR.ContentId=@MaterialRiskId;
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetMaterialRisks]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetMaterialRisks]
+AS
+BEGIN
+SELECT ContentId as MaterialRiskId,Name as MaterialRiskName,Isnull(IsActive,0) as IsActive 
+from tblMaterialRisks;
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetMetricComments]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetMetricComments] 
+  @RasMetricId int
+  AS
+  BEGIN
+  ---Root Level Comments/Data Challenged Instances 
+  SELECT top 10 t.Contentid as CommentId,t.RasMetricId,t.Comment,t.CreatedBy,
+  CONVERT(VARCHAR(26), t.CreatedDate, 109) as CreatedDate,
+  Isnull(t.ParentCommentId,0) as ParentCommentId,
+  case when (select count(1) from tblMetricWiseComments 
+  where parentcommentId =t.ContentId) > 0 then 1 else 0 end as IsParent   into #tempRoot
+  from tblMetricWiseComments t where RasMetricId=@RasMetricId and t.ParentCommentId=0
+  order by t.ContentId desc 
+  select * from #tempRoot;
+  ----Child Level Comments for the above set of root comments
+  if exists (select top 1 1 from 
+  #tempRoot where IsParent=1)
+  begin
+SELECT t.Contentid as CommentId,t.RasMetricId,t.Comment,t.CreatedBy,
+  CONVERT(VARCHAR(26), t.CreatedDate, 109) as CreatedDate,
+  Isnull(t.ParentCommentId,0) as ParentCommentId,0 as IsParent   
+  from tblMetricWiseComments t where RasMetricId=@RasMetricId and t.ParentCommentId in (select 
+  commentid from #tempRoot where IsParent=1)
+  order by t.ContentId desc 
+  end
+  drop table #tempRoot;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetMetricDimensions]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetMetricDimensions]
+  AS
+  BEGIN
+SELECT [ContentId] as Id
+      ,[Dimension] as Value      
+  FROM [MCPCEC_BI].[dbo].[tblRiskAppetiteDimensions]
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetPowerBIDSSReportModelByMetricId]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetPowerBIDSSReportModelByMetricId] --GetPowerBIDSSReportModelByMetricId 1413
+@RasMetricId int
+AS
+BEGIN
+Select 
+Isnull(RM.ZoneContextId,0) as ZoneContextId,
+Isnull(RM.RegionId,0) as RegionId,tr.Region as RegionName,
+Isnull(RM.SLTId,0) as SLTId,ts.SLTName,
+Isnull(RM.TierId,0) as TierId,
+RM.PowerBIReportPage,RM.DSSViewName,RM.PowerBIReportId,
+CASE When RM.RiskThemeId=11 then (select top 1 Name from tblMaterialRisks 
+where ContentId=RM.MaterialRiskId) else '' end as MaterialRiskFilter
+from tblRASMetrics RM left outer join tblRegion tr
+on Isnull(RM.RegionId,0)=tr.RegionId
+left outer join tblSLTs ts on Isnull(RM.SLTId,0)=ts.ContentId
+Where RM.ContentId=@RasMetricId;
+End
+GO
+/****** Object:  StoredProcedure [dbo].[GetPublishExecutiveSummaryViewModel]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetPublishExecutiveSummaryViewModel]
+AS
+BEGIN
+/*Regions*/
+EXEC GetRegions
+/*SLTs*/
+EXEC GetSLTs
+/*end of SLTs*/
+/*Reported Months*/
+Create Table #tempMonthDim(MonthKey varchar(50),MonthLabel varchar(50))
+if exists (Select  top 1 1 from tblMonthDim mDim 
+join tblExecutiveSummaryNotes_CallOuts mrs on mDim.mKey = Isnull(mrs.monthkey,''))
+begin
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim 
+join tblExecutiveSummaryNotes_CallOuts mrs on mDim.mKey = Isnull(mrs.monthkey,'')
+order by mDim.mkey asc
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim 
+where mDim.mKey>(select top 1 MonthKey from #tempMonthDim)
+order by mDim.mkey asc
+end
+else
+begin
+Insert into #tempMonthDim
+Select  top 1 mDim.mkey as MonthKey,
+mDim.Format1 as MonthLabel from tblMonthDim mDim where 
+mDim.mKey=(select 
+top 1 mkey from tblmonthdim 
+where mkey=replace(convert(varchar(7),getutcdate(),126),'-',''))
+end
+select * from #tempMonthDim
+/*end of reported months*/
+/*Latest Month call-outs*/
+select ImportantNote,
+InternalCallOuts,ExternalCallOuts
+from tblExecutiveSummaryNotes_CallOuts
+where Isnull(ZoneContextId,0)=0
+and Isnull(RegionId,0)=0
+and Isnull(SLTId,0)=0
+and ISNULL(monthkey,'')=(select top 1 MonthKey from #tempMonthDim
+order by 1)
+/*end of month-outs*/
+/* Risk Profile*/
+select NoOfMajorExt,
+NoOfPastDues,GNEPs,
+MajorAddressing,SigAddressing
+from tblRiskProfile
+where Isnull(ZoneContextId,0)=0
+and Isnull(RegionId,0)=0
+and Isnull(SLTId,0)=0
+and ISNULL(monthkey,'')=(select top 1 MonthKey from #tempMonthDim
+order by 1)
+/*end of Risk Profile*/
+drop table #tempMonthDim;
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRagMaster]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  CREATE PROC [dbo].[GetRagMaster]
+  AS
+  BEGIN
+  Select ContentId as Id,Rag as Value from tblRags;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRasMetricDetails]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROC [dbo].[GetRasMetricDetails] -- [GetRasMetricDetails] 4,4
+@RasMetricId int,
+@PerformanceId int
+AS
+BEGIN
+ -- =============================================
+-- Author:		Rohit Rustagi
+-- Create date: 05/07/2017
+-- Description:	Procedure to Get all Details for a RasMetric
+-- =============================================
+---Metric Details
+SELECT RM.[ContentId] as RasMetricId,
+       RM.MetricId
+      ,Mt.[Metric]
+      ,RM.[MaterialRiskId],	   
+	   mr.Name as MaterialRiskName
+      ,RM.[RiskThemeId],rt.RiskTheme
+	  ,RM.[DimensionId],dm.Dimension
+      ,RMP.[DataSource]
+      ,RMP.[DataOwner]
+      ,RMP.[DataSourceMode]
+      ,RMP.[BankWideTool]
+	  ,RMP.[WeighingId]
+	  ,RMP.[KRIPerformance],Isnull(RMP.RAGId,0) as RAGId
+      ,RMP.[KRI_DQ],Isnull(RMP.[IsActive],0) as IsActive,
+	  RMP.KRIRemark,Isnull(RMP.KRI_Performance_NoOfRecords,0) as KRI_Performance_NoOfRecords,
+	  RMP.KRI_Performance_RawValue,RMP.ContentId as PerformanceId,
+	  Isnull(RM.ZoneContextId,0) As ZoneContextId,
+	  Isnull(RM.RegionId,0) as RegionId,Isnull(RM.SLTId,0) as SLTId,
+	  ISnull(RMP.weekKey,'') as WeekKey
+  FROM [MCRT].[dbo].[tblRASMetrics] RM join tblRasMetricPerformance RMP
+  on RM.contentid =RMP.rasmetricid and RMP.contentid =@PerformanceId
+   join tblmetrics Mt on RM.MetricId=Mt.ContentId
+   join tblmaterialrisks mr on RM.MaterialRiskId = mr.ContentId
+ join tblRiskThemes rt on RM.RiskThemeId = rt.ContentId
+ left outer join tblRiskAppetiteDimensions dm on RM.DimensionId = dm.contentid 
+  where RM.[ContentId]=@RasMetricId;
+----Risk Appetite Limit - Criteria(s) for the Metric
+  select  RAL.ContentId as RasConditionId,RAL.RasMetricId,RAL.RA_Red_Opt1,
+  (select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt1) as RA_Red_Opt1_Text,
+cast(RAL.RA_Red_Val1 as decimal(10,2)) as RA_Red_Val1,
+RAL.RA_Red_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt2) as RA_Red_Opt2_Text,cast(RAL.RA_Red_Val2 as decimal(10,2)) as RA_Red_Val2,
+RAL.RA_Amber_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt1) as RA_Amber_Opt1_Text,cast(RAL.RA_Amber_Val1 as decimal(10,2)) as RA_Amber_Val1,
+RAL.RA_Amber_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt2) as RA_Amber_Opt2_Text,cast(RAL.RA_Amber_Val2 as decimal(10,2)) as RA_Amber_Val2,
+RAL.RA_Green_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt1) as RA_Green_Opt1_Text,cast(RAL.RA_Green_Val1 as decimal(10,2)) as RA_Green_Val1,
+RAL.RA_Green_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt2) as RA_Green_Opt2_Text,cast(RAL.RA_Green_Val2 as decimal(10,2)) as RA_Green_Val2,
+RAL.Records_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt1) as Records_Opt1_Text,RAL.Records_Val1,
+RAL.Records_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt2) as Records_Opt2_Text,RAL.Records_Val2,RAL.Remark,Isnull(RAL.IsActive,0) as IsActive
+from tblMetricWiseRiskAppetiteLimit RAL join tblRasMetricPerformance RMP on 
+RAL.RasMetricId=RMP.RasmetricId 
+and ISNULL(RAL.WeekKey,'')=Isnull(RMP.WeekKey,'')
+Where RAL.RasMetricId=@RasMetricId and isnull(RAL.IsActive,0)=1
+and RMP.ContentId=@PerformanceId and RMP.RasmetricId=@RasMetricId;
+------
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRasMetricsDashboard]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[GetRasMetricsDashboard] -- [GetRasMetricsDashboard] 1,1,0,0,1,0,1,'20170605'
+@MaterialRiskId int,
+@IsActive int =1, /*Active(0) & InActive(1)*/
+@Flag int =0, /*0-filtered mode , 1 - All mode*/
+@RiskThemeId int =0, /* when riskthemeid is provided then filtered for risk theme.*/
+@ZoneContextId int=0, /*Defines Context is Global(0), SLT(2), Region(1) or SLT + Region(3)*/
+@SLTId int =0,
+@RegionId int =0,
+@WeekKey varchar(50)
+AS
+BEGIN
+CREATE TABLE #tempDashboard
+(
+RecordId int not null,
+MetricId int not null,
+Metric varchar(512) not null,
+MaterialRiskId int not null,
+MaterialRiskName varchar(128) not null,
+RiskThemeId int not null,
+RiskTheme varchar(128) not null,
+RA_DimensionId int null,
+RA_Dimension varchar(128) null,
+DataSource varchar(128) null,
+DataOwner varchar(256) null,
+DataSourceMode varchar(50) null,
+BankWideTool varchar(50) null,
+WeighingId int null,
+KRIPerformance nvarchar(512) null,
+RAGId int null,
+KRI_Potential float NULL,
+Actual_Potential float NULL,
+KRI_Score float NULL,	
+KRI_DQ int null,
+DQ_Score float NULL,
+KRI_DQ_Score float NULL,
+IsActive int null,
+KRIRemark nvarchar(512) null,
+ZoneContextId int null,
+SLTId int null,
+RegionId int null,
+PerformanceId int null,
+WeekKey varchar(50) null,
+WeekLabel varchar(128) null,
+IsPerformanceAutomated int
+)
+Create table #tempRiskThemeSummary
+(
+RiskThemeId int not null,
+RiskTheme varchar(128) not null,
+CECRating float null,
+KRI_Rag int null,
+Total_Actual_Potential float NULL,
+Total_KRI_Score float NULL,	
+KRI_DQ int null,
+DQ_Score float NULL,
+Total_KRI_DQ_Score float NULL
+)
+
+IF(@Flag=0) /*only active metrics*/
+BEGIN
+Insert into #tempDashboard
+ SELECT RM.[ContentId] as RecordId,
+       RM.MetricId
+      ,Mt.[Metric]
+      ,RM.[MaterialRiskId],	   
+	   mr.Name as MaterialRiskName
+      ,RM.[RiskThemeId],rt.RiskTheme
+	  ,RM.[DimensionId],dm.Dimension
+      ,RMP.[DataSource]
+      ,RMP.[DataOwner]
+      ,RMP.[DataSourceMode]
+      ,RMP.[BankWideTool]
+	  ,RMP.[WeighingId]
+	  ,RMP.[KRIPerformance]
+      ,Isnull(RMP.[RAGId],0) as RAGId,
+	  RMP.KRI_Potential,
+	  RMP.Actual_Potential,RMP.KRI_Score,
+	  RMP.[KRI_DQ],RMP.DQ_Score,RMP.KRI_DQ_Score,
+	  Isnull(RMP.[IsActive],0),RMP.KRIRemark,
+	  Isnull(@ZoneContextId,0),Isnull(@SLTId,0),Isnull(@RegionId,0),
+	  RMP.contentid as PerformanceId,Isnull(RMP.WeekKey,''),wDim.WeekLabel,
+	  Isnull(RM.IsPerformanceAutomated,0)  as IsPerformanceAutomated
+  FROM [MCRT].[dbo].[tblRASMetrics] RM  join tblRasMetricPerformance RMP on
+  RM.ContentId = RMP.rasmetricId 
+   join tblmetrics Mt on RM.MetricId=Mt.ContentId
+   join tblmaterialrisks mr on RM.MaterialRiskId = mr.ContentId
+ join tblRiskThemes rt on RM.RiskThemeId = rt.ContentId
+ left outer join tblRiskAppetiteDimensions dm on RM.DimensionId = dm.contentid 
+ left outer join tblweekdimuk wDim on Isnull(RMP.WeekKey,'') = wDim.wkey
+  where RM.[MaterialRiskId]=@MaterialRiskId and ISNULL(RM.ZoneContextId,0)=Isnull(@ZoneContextId,0) and
+  ISNULL(RM.SLTId,0)=Isnull(@SLTId,0) and ISNULL(RM.RegionId,0)=Isnull(@RegionId,0) and
+   Isnull(RMP.IsActive,0)=Isnull(@IsActive,0) and Isnull(RMP.WeekKey,'')=Isnull(@WeekKey,'');
+   END
+   ELSE  /*include inactive metrics*/
+   BEGIN
+   SELECT RM.[ContentId] as RecordId,
+       RM.MetricId
+      ,Mt.[Metric]
+      ,RM.[MaterialRiskId],	   
+	   mr.Name as MaterialRiskName
+      ,RM.[RiskThemeId],rt.RiskTheme
+	  ,RM.[DimensionId],dm.Dimension
+      ,RMP.[DataSource]
+      ,RMP.[DataOwner]
+      ,RMP.[DataSourceMode]
+      ,RMP.[BankWideTool]
+	  ,RMP.[WeighingId]
+	  ,RMP.[KRIPerformance]
+      ,Isnull(RMP.[RAGId],0) as RAGId,
+	  RMP.KRI_Potential,
+	  RMP.Actual_Potential,RMP.KRI_Score,
+	  RMP.[KRI_DQ],RMP.DQ_Score,RMP.KRI_DQ_Score,
+	  Isnull(RMP.[IsActive],0),RMP.KRIRemark,
+	  Isnull(@ZoneContextId,0),Isnull(@SLTId,0),Isnull(@RegionId,0),
+	  RMP.contentid as PerformanceId,Isnull(RMP.WeekKey,''),wDim.WeekLabel,
+	  Isnull(RM.IsPerformanceAutomated,0)  as IsPerformanceAutomated
+  FROM [MCRT].[dbo].[tblRASMetrics] RM  join tblRasMetricPerformance RMP on
+  RM.ContentId = RMP.rasmetricId 
+   join tblmetrics Mt on RM.MetricId=Mt.ContentId
+   join tblmaterialrisks mr on RM.MaterialRiskId = mr.ContentId
+ join tblRiskThemes rt on RM.RiskThemeId = rt.ContentId
+ left outer join tblRiskAppetiteDimensions dm on RM.DimensionId = dm.contentid 
+ left outer join tblweekdimuk wDim on Isnull(RMP.WeekKey,'') = wDim.wkey
+  where RM.[MaterialRiskId]=@MaterialRiskId and ISNULL(RM.ZoneContextId,0)=Isnull(@ZoneContextId,0) and
+  ISNULL(RM.SLTId,0)=Isnull(@SLTId,0) and ISNULL(RM.RegionId,0)=Isnull(@RegionId,0) and
+  Isnull(RMP.WeekKey,'')=Isnull(@WeekKey,'');
+   END
+
+/*Generate & Insert RiskTheme Based overall Metric Summary*/
+Insert into #tempRiskThemeSummary
+Select tmpdash.RiskThemeId,
+tmpdash.RiskTheme,0,0,
+Sum(isnull(tmpdash.Actual_Potential,0)),
+Sum(isnull(tmpdash.KRI_Score,0)),	
+(select top 1 KRI_DQ from #tempDashboard where ISNULL(IsActive,0)=1 
+and RiskThemeId=tmpdash.RiskthemeId order by KRI_DQ ASC),
+0,Sum(isnull(tmpdash.KRI_DQ_Score,0))
+from #tempDashboard tmpdash
+where ISNULL(tmpdash.IsActive,0)=1
+Group by tmpdash.RiskThemeId,
+tmpdash.RiskTheme
+Update  tmpR
+set tmpR.CECRating = dbo.fnCalculateCECRAG(tmpR.Total_Actual_Potential,tmpR.Total_KRI_Score),
+tmpR.KRI_Rag = CASE WHEN dbo.fnCalculateCECRAG(tmpR.Total_Actual_Potential,tmpR.Total_KRI_Score) in (1,2) THEN 3 
+WHEN dbo.fnCalculateCECRAG(tmpR.Total_Actual_Potential,tmpR.Total_KRI_Score) =3 THEN 2
+WHEN dbo.fnCalculateCECRAG(tmpR.Total_Actual_Potential,tmpR.Total_KRI_Score)  > 3 THEN 1
+ELSE 1 END,tmpR.DQ_Score=dbo.fnCalculate_DQ_Score(tmpR.KRI_Rag,tmpR.KRI_DQ) 
+from #tempRiskThemeSummary tmpR
+/*---------------------------------------------------------*/
+if(isnull(@RiskThemeId,0) >0)
+BEGIN
+Select 
+RecordId,MetricId,Metric,MaterialRiskId,MaterialRiskName,
+RiskThemeId,RiskTheme,RA_DimensionId,RA_Dimension,
+DataSource,DataOwner,DataSourceMode,BankWideTool,
+WeighingId,KRIPerformance,RAGId,
+cast(KRI_Potential as decimal(10,2)) as KRI_Potential,
+cast(Actual_Potential as decimal(10,2)) as Actual_Potential,
+cast(KRI_Score as decimal(10,2)) as KRI_Score,KRI_DQ,
+cast(DQ_Score as decimal(10,2)) as DQ_Score,
+cast(KRI_DQ_Score as decimal(10,2)) as KRI_DQ_Score,
+IsActive,KRIRemark,ZoneContextId,SLTId,RegionId,PerformanceId,WeekKey,WeekLabel,IsPerformanceAutomated
+from #tempDashboard where isnull(RiskThemeId,0)=@RiskThemeId
+----Risk Appetite Limits for metrics
+select  RAL.ContentId as RasConditionId,RAL.RasMetricId,
+RAL.RA_Red_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt1) as RA_Red_Opt1_Text,
+cast(RAL.RA_Red_Val1 as decimal(10,2)) as RA_Red_Val1,
+RAL.RA_Red_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt2) as RA_Red_Opt2_Text,
+cast(RAL.RA_Red_Val2 as decimal(10,2)) as RA_Red_Val2,
+RAL.RA_Amber_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt1) as RA_Amber_Opt1_Text,
+cast(RAL.RA_Amber_Val1 as decimal(10,2)) as RA_Amber_Val1,
+RAL.RA_Amber_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt2) as RA_Amber_Opt2_Text,
+cast(RAL.RA_Amber_Val2 as decimal(10,2)) as RA_Amber_Val2,
+RAL.RA_Green_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt1) as RA_Green_Opt1_Text,
+cast(RAL.RA_Green_Val1 as decimal(10,2)) as RA_Green_Val1,
+RAL.RA_Green_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt2) as RA_Green_Opt2_Text,
+cast(RAL.RA_Green_Val2 as decimal(10,2)) as RA_Green_Val2,
+RAL.Records_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt1) as Records_Opt1_Text,RAL.Records_Val1,
+RAL.Records_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt2) as Records_Opt2_Text,
+RAL.Records_Val2,RAL.Remark,Isnull(RAL.IsActive,0) as IsActive
+from #tempDashboard tmp
+join tblMetricWiseRiskAppetiteLimit RAL on tmp.RecordId=RAL.RasMetricId
+Where isnull(tmp.RiskThemeId,0)=@RiskThemeId and Isnull(RAL.IsActive,0)=1
+and ISNULL(RAL.WeekKey,'')=Isnull(@WeekKey,'');
+---------------------------------------------------
+SELECT RiskThemeId,
+RiskTheme,
+cast(CECRating as decimal(10,2)) as CECRating,
+KRI_Rag,
+cast(Total_Actual_Potential as decimal(10,2)) as Total_Actual_Potential,
+cast(Total_KRI_Score as decimal(10,2)) as Total_KRI_Score,
+KRI_DQ,
+cast(DQ_Score as decimal(10,2)) as DQ_Score,
+cast(Total_KRI_DQ_Score as decimal(10,2)) as Total_KRI_DQ_Score
+from #tempRiskThemeSummary where isnull(RiskThemeId,0)=@RiskThemeId;
+select distinct riskthemeId,risktheme
+from #tempDashboard where isnull(RiskThemeId,0)=@RiskThemeId
+END
+ELSE
+BEGIN
+Select 
+RecordId,MetricId,Metric,MaterialRiskId,MaterialRiskName,
+RiskThemeId,RiskTheme,RA_DimensionId,RA_Dimension,
+DataSource,DataOwner,DataSourceMode,BankWideTool,
+WeighingId,KRIPerformance,RAGId,
+cast(KRI_Potential as decimal(10,2)) as KRI_Potential,
+cast(Actual_Potential as decimal(10,2)) as Actual_Potential,
+cast(KRI_Score as decimal(10,2)) as KRI_Score,KRI_DQ,
+cast(DQ_Score as decimal(10,2)) as DQ_Score,
+cast(KRI_DQ_Score as decimal(10,2)) as KRI_DQ_Score,
+IsActive,KRIRemark,ZoneContextId,SLTId,RegionId,
+PerformanceId,WeekKey,WeekLabel,IsPerformanceAutomated
+from #tempDashboard;
+----Risk Appetite Limits for metrics
+select  RAL.ContentId as RasConditionId,RAL.RasMetricId,RAL.RA_Red_Opt1,
+(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt1) as RA_Red_Opt1_Text,
+cast(RAL.RA_Red_Val1 as decimal(10,2)) as RA_Red_Val1,
+RAL.RA_Red_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Red_Opt2) as RA_Red_Opt2_Text,
+cast(RAL.RA_Red_Val2 as decimal(10,2)) as RA_Red_Val2,
+RAL.RA_Amber_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt1) as RA_Amber_Opt1_Text,
+cast(RAL.RA_Amber_Val1 as decimal(10,2)) as RA_Amber_Val1,
+RAL.RA_Amber_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Amber_Opt2) as RA_Amber_Opt2_Text,
+cast(RAL.RA_Amber_Val2 as decimal(10,2)) as RA_Amber_Val2,
+RAL.RA_Green_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt1) as RA_Green_Opt1_Text,
+cast(RAL.RA_Green_Val1 as decimal(10,2)) as RA_Green_Val1,
+RAL.RA_Green_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.RA_Green_Opt2) as RA_Green_Opt2_Text,
+cast(RAL.RA_Green_Val2 as decimal(10,2)) as RA_Green_Val2,
+RAL.Records_Opt1,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt1) as Records_Opt1_Text,RAL.Records_Val1,
+RAL.Records_Opt2,(select top 1 operator from tblLogicalOperators 
+where contentid=RAL.Records_Opt2) as Records_Opt2_Text,RAL.Records_Val2,
+RAL.Remark,Isnull(RAL.IsActive,0) as IsActive
+from #tempDashboard tmp
+join tblMetricWiseRiskAppetiteLimit RAL on tmp.RecordId=RAL.RasMetricId
+WHERE Isnull(RAL.IsActive,0)=1
+and ISNULL(RAL.WeekKey,'')=Isnull(@WeekKey,'');
+--------------------------------------------------------------
+SELECT RiskThemeId,
+RiskTheme,
+cast(CECRating as decimal(10,2)) as CECRating,
+KRI_Rag,
+cast(Total_Actual_Potential as decimal(10,2)) as Total_Actual_Potential,
+cast(Total_KRI_Score as decimal(10,2)) as Total_KRI_Score,
+KRI_DQ,
+cast(DQ_Score as decimal(10,2)) as DQ_Score,
+cast(Total_KRI_DQ_Score as decimal(10,2)) as Total_KRI_DQ_Score
+from #tempRiskThemeSummary;
+select temp.riskthemeId,temp.risktheme from 
+(select distinct t.riskthemeId,t.risktheme,(select min(RecordId) from #tempDashboard 
+where riskthemeId=t.riskthemeId) as FirstRecordNo from #tempDashboard t)temp order by temp.FirstRecordNo ASC
+END
+Select Cast((sum(isnull(Total_Actual_Potential,0)) + 1) as decimal(10,2)) as Overall_Actual_Potential,
+round(Cast((sum(isnull(Total_KRI_Score,0)) + 1) as decimal(10,2)),0) as Overall_KRI_Score
+from #tempRiskThemeSummary;
+select ActionSummary from tblmaterialriskactionsummary 
+where MaterialRiskId=@MaterialRiskId
+and ISNULL(ZoneContextId,0)=Isnull(@ZoneContextId,0) and
+ISNULL(SLTId,0)=Isnull(@SLTId,0) and ISNULL(RegionId,0)=Isnull(@RegionId,0)
+and Isnull(MonthKey,'')=(select top 1 mkey from tblWeekDimUK where
+wkey=Isnull(@WeekKey,''));
+Drop Table #tempDashboard;
+Drop Table #tempRiskThemeSummary;
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRegionNameById]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+Create PROC [dbo].[GetRegionNameById]
+@RegionId int
+AS
+BEGIN
+
+SELECT Region FROM tblRegion 
+where RegionId =@RegionId;
+
+END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRegions]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  CREATE Proc [dbo].[GetRegions]
+
+  AS
+
+  BEGIN
+
+   SELECT RegionId,Region as RegionName FROM tblRegion
+   where Isnull(IsActive,0)=1
+
+   END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRiskRatings]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+    CREATE PROC [dbo].[GetRiskRatings]
+  AS
+  BEGIN
+Select ContentId as Id, RiskRating as Value
+  from tblRiskRating;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetRiskThemes]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ CREATE PROC [dbo].[GetRiskThemes]
+  AS
+  BEGIN
+  Select ContentId as Id,RiskTheme as ThemeName,Isnull(IsActive,0)  as IsActive from tblRiskThemes;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetSLTNameById]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+Create proc [dbo].[GetSLTNameById]
+@SLTId int
+AS
+BEGIN
+
+SELECT SLTName FROM tblSLTs where contentid =@SLTId;
+
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[GetSLTs]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+    CREATE PROC [dbo].[GetSLTs]
+  AS
+  BEGIN
+  Select * from tblSLts 
+  where Isnull(IsActive,0)=1
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[GetZoneContexts]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+  Create PROC [dbo].[GetZoneContexts]
+  AS
+  BEGIN
+  Select * from tblZoneContextMaster;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[ReplicateKIsSLTRegion]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ Create Proc [dbo].[ReplicateKIsSLTRegion]
+  AS
+  Begin
+  Declare @Iterator int, @TotalRows int;
+  Select ROW_NUMBER() over (order by contentId ASC) as RowId,
+  MaterialRiskId,RiskThemeId,MetricId,DimensionId,IsActive into #tempData
+  from tblRASMetrics
+  where ZoneContextId=0
+  group by contentId,MaterialRiskId,RiskThemeId,MetricId,DimensionId,IsActive;
+
+   Set @Iterator=1;
+	  Select @TotalRows=count(*) from #tempData;
+	  set @TotalRows=isnull(@TotalRows,0);
+
+	  DEclare @MaterialRiskId int,         
+		 @RiskThemeId int,
+		 @MetricId int,
+		 @DimensionId int,
+		 @IsActive int;
+
+		 	  WHILE (@Iterator <= @TotalRows)
+BEGIN
+Declare @RasMetricId int;
+
+select @MaterialRiskId =MaterialRiskId,        
+		 @RiskThemeId =RiskThemeId,
+		 @MetricId =MetricId,
+		 @DimensionId =DimensionId,
+		 @IsActive =IsActive
+		 from #tempData where 
+	     RowId=@Iterator;
+--Regions
+Insert into tblRASMetrics([MaterialRiskId]
+      ,[RiskThemeId]
+      ,[MetricId]
+      ,[DimensionId]
+      ,[ZoneContextId]
+      ,[RegionId]
+      ,[SLTId]
+      ,[IsActive])
+select @MaterialRiskId,@RiskThemeId,@MetricId,@DimensionId,
+1,RegionId,0,@IsActive from tblRegion;
+
+--SLTs
+Insert into tblRASMetrics([MaterialRiskId]
+      ,[RiskThemeId]
+      ,[MetricId]
+      ,[DimensionId]
+      ,[ZoneContextId]
+      ,[RegionId]
+      ,[SLTId]
+      ,[IsActive])
+select @MaterialRiskId,@RiskThemeId,@MetricId,@DimensionId,
+2,0,ContentId,@IsActive from tblSLTs;
+
+---MaterialRiskPerformance
+insert into tblRasMetricPerformance([RasmetricId]
+      ,[KRIPerformance]
+      ,[KRI_Performance_RawValue]
+      ,[KRI_Performance_NoOfRecords]
+      ,[RAGId]
+      ,[KRIRemark]
+      ,[KRI_Potential]
+      ,[Actual_Potential]
+      ,[KRI_Score]
+      ,[DQ_Score]
+      ,[KRI_DQ_Score]
+      ,[IsActive]
+      ,[WeekKey]
+      ,[DataSource]
+      ,[DataOwner]
+      ,[DataSourceMode]
+      ,[BankWideTool]
+      ,[WeighingId]
+      ,[KRI_DQ])
+
+	  select RM.contentid,
+	  tmp.[KRIPerformance],
+	  tmp.[KRI_Performance_RawValue],
+	  tmp.[KRI_Performance_NoOfRecords],
+	  tmp.[RAGId],tmp.[KRIRemark],tmp.[KRI_Potential]
+      ,tmp.[Actual_Potential]
+      ,tmp.[KRI_Score]
+      ,tmp.[DQ_Score]
+      ,tmp.[KRI_DQ_Score]
+      ,tmp.[IsActive]
+      ,tmp.[WeekKey]
+      ,tmp.[DataSource]
+      ,tmp.[DataOwner]
+      ,tmp.[DataSourceMode]
+      ,tmp.[BankWideTool]
+      ,tmp.[WeighingId]
+      ,tmp.[KRI_DQ]
+	  from tblrasmetrics RM 
+	  join (select RM.ContentId,RM.MaterialRiskId,
+	  RM.RiskThemeId,RM.MetricId,RM.DimensionId,
+	  RMP.[KRIPerformance],
+	  RMP.[KRI_Performance_RawValue],
+	  RMP.[KRI_Performance_NoOfRecords],
+	  RMP.[RAGId],RMP.[KRIRemark],
+	  RMP.[KRI_Potential]
+      ,RMP.[Actual_Potential]
+      ,RMP.[KRI_Score]
+      ,RMP.[DQ_Score]
+      ,RMP.[KRI_DQ_Score]
+      ,RMP.[IsActive]
+      ,RMP.[WeekKey]
+      ,RMP.[DataSource]
+      ,RMP.[DataOwner]
+      ,RMP.[DataSourceMode]
+      ,RMP.[BankWideTool]
+      ,RMP.[WeighingId]
+      ,RMP.[KRI_DQ] 
+	  from tblRASMetrics RM join tblRasMetricPerformance RMP
+	  on RM.ContentId=RMP.RasmetricId
+	  where RM.ContentId=@Iterator)tmp
+	  on RM.MaterialRiskId=tmp.MaterialRiskId
+	  and RM.RiskThemeId=tmp.RiskThemeId
+	  and RM.MetricId=tmp.MetricId
+	  and RM.DimensionId=tmp.DimensionId
+
+	  where Rm.ZoneContextId in(1,2)
+	  and Rm.MaterialRiskId=@MaterialRiskId
+	  and Rm.RiskThemeId=@RiskThemeId
+	  and Rm.MetricId=@MetricId
+	  and Rm.DimensionId=@DimensionId
+	  and Rm.IsActive=@IsActive;
+
+----Risk Appetite Limits
+Insert into tblMetricWiseRiskAppetiteLimit(
+[RasMetricId]
+      ,[RA_Red_Opt1]
+      ,[RA_Red_Val1]
+      ,[RA_Red_Opt2]
+      ,[RA_Red_Val2]
+      ,[RA_Amber_Opt1]
+      ,[RA_Amber_Val1]
+      ,[RA_Amber_Opt2]
+      ,[RA_Amber_Val2]
+      ,[RA_Green_Opt1]
+      ,[RA_Green_Val1]
+      ,[RA_Green_Opt2]
+      ,[RA_Green_Val2]
+      ,[Records_Opt1]
+      ,[Records_Val1]
+      ,[Records_Opt2]
+      ,[Records_Val2]
+      ,[Remark]
+      ,[IsActive]
+      ,[WeekKey])
+
+	  select RM.contentid,
+	  tmp.[RA_Red_Opt1]
+      ,tmp.[RA_Red_Val1]
+      ,tmp.[RA_Red_Opt2]
+      ,tmp.[RA_Red_Val2]
+      ,tmp.[RA_Amber_Opt1]
+      ,tmp.[RA_Amber_Val1]
+      ,tmp.[RA_Amber_Opt2]
+      ,tmp.[RA_Amber_Val2]
+      ,tmp.[RA_Green_Opt1]
+      ,tmp.[RA_Green_Val1]
+      ,tmp.[RA_Green_Opt2]
+      ,tmp.[RA_Green_Val2]
+      ,tmp.[Records_Opt1]
+      ,tmp.[Records_Val1]
+      ,tmp.[Records_Opt2]
+      ,tmp.[Records_Val2]
+      ,tmp.[Remark]
+      ,tmp.[IsActive]
+      ,tmp.[WeekKey]
+
+	  from tblrasmetrics RM join (select RM.ContentId,RM.MaterialRiskId,
+	  RM.RiskThemeId,RM.MetricId,RM.DimensionId,
+	  RAL.[RA_Red_Opt1]
+      ,RAL.[RA_Red_Val1]
+      ,RAL.[RA_Red_Opt2]
+      ,RAL.[RA_Red_Val2]
+      ,RAL.[RA_Amber_Opt1]
+      ,RAL.[RA_Amber_Val1]
+      ,RAL.[RA_Amber_Opt2]
+      ,RAL.[RA_Amber_Val2]
+      ,RAL.[RA_Green_Opt1]
+      ,RAL.[RA_Green_Val1]
+      ,RAL.[RA_Green_Opt2]
+      ,RAL.[RA_Green_Val2]
+      ,RAL.[Records_Opt1]
+      ,RAL.[Records_Val1]
+      ,RAL.[Records_Opt2]
+      ,RAL.[Records_Val2]
+      ,RAL.[Remark]
+      ,RAL.[IsActive]
+      ,RAL.[WeekKey]
+	  from tblRASMetrics RM join tblMetricWiseRiskAppetiteLimit RAL
+	  on RM.ContentId=RAL.RasmetricId
+	  where RM.ContentId=@Iterator)tmp
+
+	  on RM.MaterialRiskId=tmp.MaterialRiskId
+	  and RM.RiskThemeId=tmp.RiskThemeId
+	  and RM.MetricId=tmp.MetricId
+	  and RM.DimensionId=tmp.DimensionId
+	
+	  where Rm.ZoneContextId in(1,2)
+	  and Rm.MaterialRiskId=@MaterialRiskId
+	  and Rm.RiskThemeId=@RiskThemeId
+	  and Rm.MetricId=@MetricId
+	  and Rm.DimensionId=@DimensionId
+	  and Rm.IsActive=@IsActive; 
+
+
+
+
+	
+		 Set @Iterator = @Iterator + 1;
+END
+
+drop table #tempData;
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[sp_helptext2]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[sp_helptext2] (@ProcName NVARCHAR(256))
+AS
+BEGIN
+  DECLARE @PROC_TABLE TABLE (X1  NVARCHAR(MAX))
+
+  DECLARE @Proc NVARCHAR(MAX)
+  DECLARE @Procedure NVARCHAR(MAX)
+  DECLARE @ProcLines TABLE (PLID INT IDENTITY(1,1), Line NVARCHAR(MAX))
+
+  SELECT @Procedure = 'SELECT DEFINITION FROM '+db_name()+'.SYS.SQL_MODULES WHERE OBJECT_ID = OBJECT_ID('''+@ProcName+''')'
+
+  insert into @PROC_TABLE (X1)
+        exec  (@Procedure)
+
+  SELECT @Proc=X1 from @PROC_TABLE
+
+  WHILE CHARINDEX(CHAR(13)+CHAR(10),@Proc) > 0
+  BEGIN
+        INSERT @ProcLines
+        SELECT LEFT(@Proc,CHARINDEX(CHAR(13)+CHAR(10),@Proc)-1)
+        SELECT @Proc = SUBSTRING(@Proc,CHARINDEX(CHAR(13)+CHAR(10),@Proc)+2,LEN(@Proc))
+  END
+ --* inserts last line
+ insert @ProcLines 
+ select @Proc ;
+
+ --edited here. (where Line<>'')
+ SELECT Line FROM @ProcLines where Line<>'' ORDER BY PLID
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[UpdateRagValueByRasMetricId]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[UpdateRagValueByRasMetricId]
+  @RasMetricId int,
+  @PerformanceId int,
+  @DimensionId int,  
+  @InputPerformanceValue float = null,
+  @NoOfRecords int = null,
+  @RegionWiseKRIPerformance varchar(max) = null, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag int = null, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark nvarchar(512) =null,
+  @CreatedBy varchar(50) =null,
+  @DataSource varchar(128)=null,
+@DataOwner varchar(256)=null,
+@DataSourceMode varchar(50)=null,
+@BankWideTool varchar(50)=null,
+@WeighingId int,
+@KRIDQ int,
+@IsActive int,
+  @WeekKey varchar(50) 
+  AS 
+  BEGIN
+  -- =============================================
+-- Author:		Rohit Rustagi
+-- Create date: 05/07/2017
+-- Description:	Procedure to Update RAG Value and Performance for a RasMetric
+-- =============================================
+	SET NOCOUNT ON;
+  Declare  @RA_Red_Opt1 int =null,
+  @RA_Red_Val1 float=null,
+    @RA_Red_Opt2 int =null,
+  @RA_Red_Val2 float=null,
+    @RA_Amber_Opt1 int =null,
+  @RA_Amber_Val1 float=null,
+    @RA_Amber_Opt2 int =null,
+  @RA_Amber_Val2 float=null,
+    @RA_Green_Opt1 int =null,
+  @RA_Green_Val1 float=null,
+    @RA_Green_Opt2 int =null,
+  @RA_Green_Val2 float=null,
+  @Records_Opt1 int =null,
+  @Records_Val1 int =null,
+  @Records_Opt2 int =null,
+  @Records_Val2 int =null,
+  @RagId int=0,
+  @KRIPerformance nvarchar(512)=null;
+
+  DECLARE @MaterialRiskId int,@ZoneContextId int,@RegionId int,@SLTId int;
+
+  if (isnull(@RasMetricId,0) >  0 and isnull(@DimensionId,0) > 0)
+  begin
+
+  Declare @Iterator int, @TotalRows int;
+  ---Percentage , Number , Records Based Dimensions
+  if(@DimensionId=1 or @DimensionId=2 or @DimensionId=4 or @DimensionId=5 )
+  begin
+  if(@DimensionId=1 or @DimensionId=2)
+  begin
+
+    Select top 1 @RA_Red_Opt1= [RA_Red_Opt1]
+      ,@RA_Red_Val1=[RA_Red_Val1]
+      ,@RA_Red_Opt2=[RA_Red_Opt2]
+      ,@RA_Red_Val2=[RA_Red_Val2]
+      ,@RA_Amber_Opt1=[RA_Amber_Opt1]
+      ,@RA_Amber_Val1=[RA_Amber_Val1]
+      ,@RA_Amber_Opt2=[RA_Amber_Opt2]
+      ,@RA_Amber_Val2=[RA_Amber_Val2]
+      ,@RA_Green_Opt1=[RA_Green_Opt1]
+      ,@RA_Green_Val1=[RA_Green_Val1]
+      ,@RA_Green_Opt2=[RA_Green_Opt2]
+      ,@RA_Green_Val2=[RA_Green_Val2]
+      ,@Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from tblMetricWiseRiskAppetiteLimit 
+	  where RasMetricId=@RasMetricId 
+	  and Isnull(Isactive,0)=1
+	  and Isnull(WeekKey,'')=Isnull(@WeekKey,'') 
+	  order by ContentId desc;
+
+	  end
+	  else if(@DimensionId=4 or @DimensionId=5)
+  begin
+
+  select ROW_NUMBER() over(order by contentid ASC) as RowId, [RA_Red_Opt1]
+      ,[RA_Red_Val1]
+      ,[RA_Red_Opt2]
+      ,[RA_Red_Val2]
+      ,[RA_Amber_Opt1]
+      ,[RA_Amber_Val1]
+      ,[RA_Amber_Opt2]
+      ,[RA_Amber_Val2]
+      ,[RA_Green_Opt1]
+      ,[RA_Green_Val1]
+      ,[RA_Green_Opt2]
+      ,[RA_Green_Val2]
+      ,[Records_Opt1]
+      ,[Records_Val1]
+      ,[Records_Opt2]
+      ,[Records_Val2]
+	  into #tempMetricWiseRiskAppetiteLimit	   
+	    from tblMetricWiseRiskAppetiteLimit 
+	  where RasMetricId=@RasMetricId and Isnull(Isactive,0)=1
+	  and Isnull(WeekKey,'')=Isnull(@WeekKey,'');
+
+---Iteratin Logic	  
+	  Set @Iterator=1;
+	  Select @TotalRows=count(1) from #tempMetricWiseRiskAppetiteLimit;
+	  set @TotalRows=isnull(@TotalRows,0);
+WHILE (@Iterator <= @TotalRows)
+BEGIN
+
+Select top 1 @Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from #tempMetricWiseRiskAppetiteLimit 
+	  where RowId=@Iterator;
+
+	   --To Check Constraints for #Records 
+	  if(isnull(@Records_Opt1,0) >0 or isnull(@Records_Opt2,0)>0)
+	  begin
+	  if(isnull(@Records_Opt1,0) >0 and isnull(@Records_Opt2,0)>0)
+	  begin
+	  if((select dbo.fnLogicalOperator(@Records_Opt1,@NoOfRecords,@Records_Val1)) =1
+	   and (select dbo.fnLogicalOperator(@Records_Opt2,@NoOfRecords,@Records_Val2)) =1)
+	  begin
+	  Select top 1 @RA_Red_Opt1= [RA_Red_Opt1]
+      ,@RA_Red_Val1=[RA_Red_Val1]
+      ,@RA_Red_Opt2=[RA_Red_Opt2]
+      ,@RA_Red_Val2=[RA_Red_Val2]
+      ,@RA_Amber_Opt1=[RA_Amber_Opt1]
+      ,@RA_Amber_Val1=[RA_Amber_Val1]
+      ,@RA_Amber_Opt2=[RA_Amber_Opt2]
+      ,@RA_Amber_Val2=[RA_Amber_Val2]
+      ,@RA_Green_Opt1=[RA_Green_Opt1]
+      ,@RA_Green_Val1=[RA_Green_Val1]
+      ,@RA_Green_Opt2=[RA_Green_Opt2]
+      ,@RA_Green_Val2=[RA_Green_Val2]
+      ,@Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from #tempMetricWiseRiskAppetiteLimit 
+	  where RowId=@Iterator;
+	  end
+	  end
+	  else  if(isnull(@Records_Opt1,0) >0 and isnull(@Records_Opt2,0)=0)
+	  begin
+	  if((select dbo.fnLogicalOperator(@Records_Opt1,@NoOfRecords,@Records_Val1)) =1)
+	  begin
+	  Select top 1 @RA_Red_Opt1= [RA_Red_Opt1]
+      ,@RA_Red_Val1=[RA_Red_Val1]
+      ,@RA_Red_Opt2=[RA_Red_Opt2]
+      ,@RA_Red_Val2=[RA_Red_Val2]
+      ,@RA_Amber_Opt1=[RA_Amber_Opt1]
+      ,@RA_Amber_Val1=[RA_Amber_Val1]
+      ,@RA_Amber_Opt2=[RA_Amber_Opt2]
+      ,@RA_Amber_Val2=[RA_Amber_Val2]
+      ,@RA_Green_Opt1=[RA_Green_Opt1]
+      ,@RA_Green_Val1=[RA_Green_Val1]
+      ,@RA_Green_Opt2=[RA_Green_Opt2]
+      ,@RA_Green_Val2=[RA_Green_Val2]
+      ,@Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from #tempMetricWiseRiskAppetiteLimit 
+	  where RowId=@Iterator;
+	  end
+	  end
+	    else  if(isnull(@Records_Opt2,0) >0 and isnull(@Records_Opt1,0)=0)
+	  begin
+	  if((select dbo.fnLogicalOperator(@Records_Opt2,@NoOfRecords,@Records_Val2)) =1)
+	  begin
+	  Select top 1 @RA_Red_Opt1= [RA_Red_Opt1]
+      ,@RA_Red_Val1=[RA_Red_Val1]
+      ,@RA_Red_Opt2=[RA_Red_Opt2]
+      ,@RA_Red_Val2=[RA_Red_Val2]
+      ,@RA_Amber_Opt1=[RA_Amber_Opt1]
+      ,@RA_Amber_Val1=[RA_Amber_Val1]
+      ,@RA_Amber_Opt2=[RA_Amber_Opt2]
+      ,@RA_Amber_Val2=[RA_Amber_Val2]
+      ,@RA_Green_Opt1=[RA_Green_Opt1]
+      ,@RA_Green_Val1=[RA_Green_Val1]
+      ,@RA_Green_Opt2=[RA_Green_Opt2]
+      ,@RA_Green_Val2=[RA_Green_Val2]
+      ,@Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from #tempMetricWiseRiskAppetiteLimit 
+	  where RowId=@Iterator;
+	  end
+	  end
+	  
+	  end    
+Set @Iterator = @Iterator + 1
+END
+	   
+    drop table #tempMetricWiseRiskAppetiteLimit;
+	  end
+
+---Generate RAG Value
+select @RagId = isnull(dbo.fnCheckRagConstraints
+(@RA_Red_Opt1,
+  @RA_Red_Val1,
+    @RA_Red_Opt2,
+ @RA_Red_Val2,
+    @RA_Amber_Opt1,
+  @RA_Amber_Val1,
+   @RA_Amber_Opt2,
+ @RA_Amber_Val2,
+    @RA_Green_Opt1,
+ @RA_Green_Val1,
+   @RA_Green_Opt2,
+  @RA_Green_Val2,@InputPerformanceValue),0); 
+---Generate Performance String Value 
+SET @KRIPerformance = CASE WHEN @DimensionId =1 THEN 
+                       CAST(@InputPerformanceValue as varchar) + '%'
+					    WHEN @DimensionId =2 THEN 
+                       CAST(CAST(@InputPerformanceValue as int) as varchar) 
+					    WHEN @DimensionId =4 THEN 
+                       CAST(@InputPerformanceValue as varchar) + '%' + '|' + '(#Record(s) - ' + cast(@NoOfRecords as varchar) + ')'
+					  	    WHEN @DimensionId =5 THEN 
+                      CAST(@InputPerformanceValue as varchar)   + '|' + '(#Record(s) - ' + cast(@NoOfRecords as varchar) + ')'
+					  Else '' End;
+END
+  ---Region Wise KRI Dimensions
+  else if (@DimensionId=6 or @DimensionId=7)
+  begin
+
+   Select top 1 @RA_Red_Opt1= [RA_Red_Opt1]
+      ,@RA_Red_Val1=[RA_Red_Val1]
+      ,@RA_Red_Opt2=[RA_Red_Opt2]
+      ,@RA_Red_Val2=[RA_Red_Val2]
+      ,@RA_Amber_Opt1=[RA_Amber_Opt1]
+      ,@RA_Amber_Val1=[RA_Amber_Val1]
+      ,@RA_Amber_Opt2=[RA_Amber_Opt2]
+      ,@RA_Amber_Val2=[RA_Amber_Val2]
+      ,@RA_Green_Opt1=[RA_Green_Opt1]
+      ,@RA_Green_Val1=[RA_Green_Val1]
+      ,@RA_Green_Opt2=[RA_Green_Opt2]
+      ,@RA_Green_Val2=[RA_Green_Val2]
+      ,@Records_Opt1=[Records_Opt1]
+      ,@Records_Val1=[Records_Val1]
+      ,@Records_Opt2=[Records_Opt2]
+      ,@Records_Val2=[Records_Val2] 
+	  from tblMetricWiseRiskAppetiteLimit 
+	  where RasMetricId=@RasMetricId and Isnull(Isactive,0)=1
+	  and Isnull(WeekKey,'')=Isnull(@WeekKey,'')  
+	  order by ContentId desc;
+
+---Generate Temp Table for Logging RegionWise KRI Performance
+	  SELECT Item as RegionKRI,Row_Number() over ( order by Item) as RowId,0 as RAGId
+	  into #tempRegionWiseKRI
+FROM dbo.SplitString(@RegionWiseKRIPerformance, '|')
+
+---Iteratin Logic
+	  Set @Iterator=1;
+	  Select @TotalRows=count(*) from #tempRegionWiseKRI;
+	  set @TotalRows=isnull(@TotalRows,0);
+	  Declare @RegionKRI float =0;
+WHILE (@Iterator <= @TotalRows)
+BEGIN
+Select top 1 @RegionKRI=substring(replace(RegionKRI,'%',''),
+(select dbo.INSTR(replace(RegionKRI,'%',''), '-', 1, 1))+1,
+len(replace(RegionKRI,'%',''))-(select dbo.INSTR(replace(RegionKRI,'%',''), '-', 1, 1)))       
+	  from #tempRegionWiseKRI 
+	  where RowId=@Iterator;
+--get rag for specific region
+	  update #tempRegionWiseKRI set RAGId =
+(select isnull(dbo.fnCheckRagConstraints
+(@RA_Red_Opt1,
+  @RA_Red_Val1,
+    @RA_Red_Opt2,
+ @RA_Red_Val2,
+    @RA_Amber_Opt1,
+  @RA_Amber_Val1,
+   @RA_Amber_Opt2,
+ @RA_Amber_Val2,
+    @RA_Green_Opt1,
+ @RA_Green_Val1,
+   @RA_Green_Opt2,
+  @RA_Green_Val2,@RegionKRI),0))   
+  where RowId= @Iterator;
+Set @Iterator = @Iterator + 1
+END
+
+  ---if green for all then green else the worst 
+  if((select count(*) from #tempRegionWiseKRI where ragid=3) =@TotalRows)
+  begin
+  SET @RagId=3;
+  End
+  Else
+  Begin
+  select @RagId = min(ragid) from #tempRegionWiseKRI;
+  End
+
+---Generate Performance String Value 
+SET @KRIPerformance = @RegionWiseKRIPerformance;
+drop table #tempRegionWiseKRI
+  end
+
+  ---Decisional Dimensions
+  else if (@DimensionId=8 or @DimensionId=9)
+  begin
+  ---Yes/ Fully Aligned (1) => 3(Green)
+   ---Partially Aligned (2) => 2(Amber)
+    ---No/ Not Aligned (3) => 1(Red)
+  SET @RagId = CASE Isnull(@RagFlag,0) 
+  When 1 then 3 When 2 then 2 When 3 then 1 else 0 end;
+  ---Generate Performance String Value 
+SET @KRIPerformance = CASE WHEN @DimensionId =8 THEN 
+                      CASE Isnull(@RagFlag,0) 
+  When 1 then 'Yes' When 3 then 'No' else '' end
+					    WHEN @DimensionId =9 THEN 
+                      CASE Isnull(@RagFlag,0) 
+  When 1 then 'Fully Aligned(Yes)' When 2 then 'Partially Aligned' When 3 then 'Not Aligned(No)' else '' end
+				   Else '' END;
+  end
+
+  ---Rag Value Being Provided for Performance data not being available
+  else if (@DimensionId=3)
+  begin
+  SET @RagId = Isnull(@RagFlag,0);
+  SET @KRIPerformance ='Data Not Available';
+  end
+
+  IF NOT EXISTS (select top 1 1 from tblRasMetricPerformance
+  where rasmetricid=@RasMetricId and isnull(weekKey,'')=isnull(@WeekKey,''))
+  begin
+  insert into tblRasMetricPerformance([RasmetricId]
+      ,[KRIPerformance]
+      ,[KRI_Performance_RawValue]
+      ,[KRI_Performance_NoOfRecords]
+      ,[RAGId]
+      ,[KRIRemark]
+      ,[CreatedDate]
+      ,[CreatedBy]     
+      ,[KRI_Potential]
+      ,[Actual_Potential]
+      ,[KRI_Score]
+      ,[DQ_Score]
+      ,[KRI_DQ_Score]
+      ,[IsActive]
+      ,[WeekKey]
+      ,[DataSource]
+      ,[DataOwner]
+      ,[DataSourceMode]
+      ,[BankWideTool]
+      ,[WeighingId]
+      ,[KRI_DQ])
+	  Select @RasMetricId,@KRIPerformance,
+	  @InputPerformanceValue,@NoOfRecords,@RagId,@KRIRemark,GetUTcDate(),
+	  @CreatedBy,0,0,0,0,0,Isnull(@IsActive,1),@WeekKey,@DataSource,@DataOwner,
+	  @DataSourceMode,@BankWideTool,@WeighingId,@KRIDQ;
+
+	  SET @PerformanceId=SCOPE_IDENTITY();
+  End
+  else
+  begin
+
+  update RMP 
+set RMP.Isactive=Isnull(@IsActive,RMP.IsActive),
+RMP.WeighingId = ISNULL(@WeighingId,RMP.WeighingId),
+RMP.DataSource = @DataSource,
+RMP.BankWideTool=@BankWideTool,
+RMP.DataOwner = @DataOwner,
+RMP.DataSourceMode=@DataSourceMode,
+RMP.KRI_DQ=ISNULL(@KRIDQ,RMP.KRI_DQ),
+RMP.KRIPerformance = isnull(@KRIPerformance,RMP.KRIPerformance),
+  RMP.RAGId=@RagId,RMP.KRIRemark=isnull(@KRIRemark,RMP.KRIRemark),
+  RMP.KRI_Performance_NoOfRecords=@NoOfRecords,
+  RMP.KRI_Performance_RawValue=@InputPerformanceValue,
+  RMP.WeekKey =@WeekKey,RMP.ModifiedBy=@CreatedBy,
+RMP.ModifiedDate=GETUTCDATE()
+from tblRasMetricPerformance RMP 
+where RMP.contentid=@PerformanceId
+and RMP.RasmetricId=@RasMetricId and ISNULL(RMP.WeekKey,'')=@WeekKey;
+
+
+  end
+
+  
+
+  -----Update PErformance MEasures ------------------
+  EXEC UpdateRasMetricPerformanceByPerformanceId @RasMetricId=@RasMetricId,
+  @PerformanceId=@PerformanceId,@WeekKey=@WeekKey; 
+  ---------------------End --------------------------
+
+  end
+  	SET NOCOUNT OFF;
+  END
+GO
+/****** Object:  StoredProcedure [dbo].[UpdateRasMetricDetailsByMetricId]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE Proc [dbo].[UpdateRasMetricDetailsByMetricId]
+@RasMetricId int,
+@PerformanceId int,
+@DataSource varchar(128)=null,
+@DataOwner varchar(256)=null,
+@DataSourceMode varchar(50)=null,
+@BankWideTool varchar(50)=null,
+@WeighingId int,
+@IsActive int,
+@DimensionId int,
+@MetricWiseRiskAppetiteLimit_xmlstr ntext =null,
+@InputPerformanceValue float = null,
+@NoOfRecords int = null,
+@RegionWiseKRIPerformance varchar(max) = null, --- Array of RegionWise KRI Performances separated by '|',
+@RagFlag int = null, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+@KRIRemark nvarchar(512) =null,
+@KRIDQ int, 
+@CreatedBy varchar(50)=null,
+@WeekKey varchar(50),
+@Error int = null Out,
+@ErrorMsg varchar(512) =null Out,
+@OutPutParam int = null Out
+AS
+BEGIN
+SET @Error =0;
+SET @OutPutParam=0;
+SET @ErrorMsg='Updated Successfully'; 
+ -- =============================================
+-- Author:		Rohit Rustagi
+-- Create date: 05/07/2017
+-- Description:	Procedure to Add-Update a RasMetric
+-- =============================================
+if(@PerformanceId is null or @PerformanceId=0)
+begin
+SET @Error=1; ----'PerformanceId not provided'
+SET @ErrorMsg='PerformanceId not provided';
+end
+else if(@RasMetricId is null or @RasMetricId=0)
+begin
+SET @Error=1; ----'RasMetricId not provided'
+SET @ErrorMsg='RasMetricId not provided';
+end
+else if(Isnull(@WeekKey,'')='')
+begin
+SET @Error=1; ----'Week Info not provided'
+SET @ErrorMsg='Week Info not provided';
+end
+if(@Error =0 and ISNULL(@PerformanceId,0) >0)
+begin
+----Update Risk Appetite Criteria(S) ------------------------------
+if(@DimensionId =1 or @DimensionId =2 or @DimensionId =4 
+or @DimensionId =5 or @DimensionId =6 or @DimensionId =7)
+begin
+if(CAST(@MetricWiseRiskAppetiteLimit_xmlstr as nvarchar(max)) <> '' 
+and @MetricWiseRiskAppetiteLimit_xmlstr is not null)
+begin
+EXEC [Add_Update_MetricWiseRiskAppetiteLimit] @RasMetricId =@RasMetricId,
+@WeekKey=@WeekKey,
+@MetricWiseRiskAppetiteLimit_xmlstr =@MetricWiseRiskAppetiteLimit_xmlstr,
+@CreatedBy=@CreatedBy;
+end
+else
+begin
+SET @Error=1; ----'Risk Appetite Condition Not Provided'
+SET @ErrorMsg='Risk Appetite Criteria Not Provided';
+end
+end
+------------------------END Of Update RISk Appetite Criteria --------------------
+end
+if(@Error =0 and ISNULL(@PerformanceId,0) >0)
+begin
+----Update Rag Value -------------------------------------------
+if(@DimensionId =1 or @DimensionId =2)
+begin
+if(@InputPerformanceValue is not null)
+begin
+EXEC [UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,
+  @PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag=@RagFlag, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+else
+begin
+SET @Error=1; ----'Input Performance Value Not Provided'
+SET @ErrorMsg='KRI Performance Measure Not Provided';
+end
+END
+if(@DimensionId =4 or @DimensionId =5)
+begin
+if(@InputPerformanceValue is not null and ISNULL(@NoOfRecords,0)>0)
+begin
+EXEC [UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag=@RagFlag, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy ,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+else
+begin
+SET @Error=1; ----'Input Performance Value Not Provided'
+SET @ErrorMsg='KRI Performance Measure / No of Records Not Provided';
+end
+END
+if(@DimensionId =6 or @DimensionId =7)
+begin
+if(ISNULL(@RegionWiseKRIPerformance,'')<>'')
+begin
+EXEC [UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag=@RagFlag, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy ,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+else
+begin
+SET @Error=1; ----'Input Performance Value Not Provided'
+SET @ErrorMsg='Region-wise KRI Performance Measure Not Provided';
+end
+END
+if(@DimensionId =8 or @DimensionId =9 or @DimensionId=3)
+begin
+if(ISNULL(@RagFlag,0)>0)
+begin
+EXEC [UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag=@RagFlag, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+else
+begin
+SET @Error=1; ----'Input Performance Value Not Provided'
+SET @ErrorMsg='KRI Performance Measure / Rag Indicator Not Provided';
+end
+END
+----------END of Update RAG Value---------------------------------
+end
+Select top 1 @OutPutParam=ISNULL(RAGId,0) from 
+tblRasMetricPerformance 
+where RasmetricId=@RasMetricId and Isnull(WeekKey,'')=@WeekKey;
+-----------------------------END Of Update BASIC Metric Details ----
+END
+GO
+/****** Object:  StoredProcedure [dbo].[UpdateRasMetricPerformanceByPerformanceId]    Script Date: 08-09-2017 16:13:05 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  CREATE PROC [dbo].[UpdateRasMetricPerformanceByPerformanceId]
+@RasMetricId int,
+@PerformanceId int,
+@WeekKey varchar(50)
+AS
+BEGIN
+Declare @RAGId int=0,@WeighingId int=0,@KRI_DQ int=0,
+@IsActive int=0,
+@KRI_Potential float =0,
+@Actual_Potential float =0,
+@KRI_Score float =0,
+@DQ_Score float =0,
+@KRI_DQ_Score float =0,
+@Total_KRI_Potential float=0,
+@MaterialRiskId int=0,@ZoneContextId int =0,
+@RegionId int =0,@SLTId int=0;
+Select @RAGId = Isnull(RMP.RAGId,0)
+,@WeighingId= Isnull(RMP.WeighingId,0) ,
+@KRI_DQ = Isnull(RMP.KRI_DQ,0),
+@IsActive =  Isnull(RMP.IsActive,0),
+@MaterialRiskId = RM.MaterialRiskId,
+@ZoneContextId = Isnull(RM.ZoneContextId,0),
+@RegionId = Isnull(RM.RegionId,0),
+@SLTId = Isnull(RM.SLTId,0)
+from tblRasMetricPerformance RMP 
+join tblRASMetrics RM on RMP.RasmetricId = RM.ContentId
+WHERE RMP.ContentId=@PerformanceId and RMP.RasmetricId=@RasMetricId
+and Isnull(RMP.WeekKey,'')=Isnull(@WeekKey,'');
+select @KRI_Potential=dbo.fnCalculateKRIPotential(@RAGId,@WeighingId);
+select @DQ_Score = dbo.fnCalculate_DQ_Score(@RAGId,@KRI_DQ);
+update RMP set RMP.KRI_Potential=@KRI_Potential,
+RMP.DQ_Score=@DQ_Score
+from tblRasMetricPerformance RMP
+where RMP.ContentId=@PerformanceId and RMP.RasmetricId=@RasMetricId
+and Isnull(RMP.WeekKey,'')=Isnull(@WeekKey,'');
+SET @Total_KRI_Potential = ISNULL((select sum(isnull(KRI_Potential,0)) 
+            from tblRasMetricPerformance where RAGId is not null and
+                                   ISNULL(IsActive,0)=1 and
+								   RasmetricId in (select contentid from tblrasmetrics where 
+								   MaterialRiskId=@MaterialRiskId  
+								   and Isnull(ZoneContextId,0) =Isnull(@ZoneContextId,0)
+								   and Isnull(RegionId,0) =Isnull(@RegionId,0)
+								   and Isnull(SLTId,0) =Isnull(@SLTId,0))
+                                  	and Isnull(WeekKey,'')=Isnull(@WeekKey,'')) ,0);
+Update tmpDash
+SET tmpDash.Actual_Potential =temp.Actual_Potential,
+tmpDash.KRI_DQ_Score=temp.Actual_Potential * tmpDash.DQ_Score,
+tmpDash.KRI_Score = (CASE WHEN isnull(tmpDash.RAGId,0) =1
+                     THEN 
+					 temp.Actual_Potential
+					 WHEN isnull(RAGId,0) =2
+					 THEN
+					 (temp.Actual_Potential/2)
+					 ELSE
+					 0
+					 END)
+					 from tblRasMetricPerformance tmpDash 
+					 join
+                    (SELECT ContentId as PerformanceId,
+					  (CASE 
+                       WHEN ISNULL(RAGId,0)>0 
+                       THEN
+					   (CASE WHEN (@Total_KRI_Potential>0) 
+					   THEN
+					   ((ISNULL(KRI_Potential,0)/@Total_KRI_Potential)*4)
+					   ELSE
+					    0
+					   END)
+					   ELSE
+					   0
+					   END) as Actual_Potential from tblRasMetricPerformance
+					   WHERE ISNULL(IsActive,0)=1 and 
+					   RasmetricId in (select contentid from tblrasmetrics where 
+								   MaterialRiskId=@MaterialRiskId 
+								   and Isnull(ZoneContextId,0) =Isnull(@ZoneContextId,0)
+								   and Isnull(RegionId,0) =Isnull(@RegionId,0)
+								   and Isnull(SLTId,0) =Isnull(@SLTId,0))
+								   and Isnull(WeekKey,'')=Isnull(@WeekKey,''))temp
+on tmpDash.Contentid=temp.PerformanceId 
+WHERE ISNULL(tmpDash.IsActive,0)=1 and 
+					   tmpDash.RasmetricId in (select contentid from tblrasmetrics where 
+								   MaterialRiskId=@MaterialRiskId 
+								   and Isnull(ZoneContextId,0) =Isnull(@ZoneContextId,0)
+								   and Isnull(RegionId,0) =Isnull(@RegionId,0)
+								   and Isnull(SLTId,0) =Isnull(@SLTId,0))
+								   and Isnull(tmpDash.WeekKey,'')=Isnull(@WeekKey,'');
+END
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnCalculate_DQ_Score]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnCalculate_DQ_Score]
+(@KI int,@KRI_DQ int)
+RETURNS float
+BEGIN
+Declare @DQ_Score  float;
+DECLARE @KI_Val varchar(50);
+SET @KI_Val = (select RAG from tblRags where Contentid=@KI);
+
+   SET @DQ_Score = (CASE 
+                        WHEN  ISNULL(@KRI_DQ,0)>0
+						THEN 
+
+						CASE @KRI_DQ 
+						WHEN 1 
+						THEN
+						(SELECT TOP 1 [RED] from 
+						tblMCARating WHERE KI=ISNULL(@KI_Val,'Unr'))
+						WHEN 2 
+						THEN
+						(SELECT TOP 1 [AMBER] from 
+						tblMCARating WHERE KI=ISNULL(@KI_Val,'Unr'))
+						WHEN 3 
+						THEN
+						(SELECT TOP 1 [GREEN] from 
+						tblMCARating WHERE KI=ISNULL(@KI_Val,'Unr'))
+						ELSE
+						0
+						END
+
+						ELSE
+						0
+						END);
+
+
+return @DQ_Score;
+						 
+END
+
+
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnCalculateCECRAG]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnCalculateCECRAG]
+(@Actual_Potential float,@KRI_Score float)
+RETURNS float
+BEGIN
+    RETURN (CASE 
+	when isnull(@Actual_Potential,0)>0 
+	then
+	isnull(ROUND(cast((((@KRI_Score/@Actual_Potential)*4)+1)as float),0),1)
+	 else
+	  1 
+	  end
+	  )
+END
+
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnCalculateKRIPotential]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnCalculateKRIPotential]
+(@RAGId int,@WeighingId int)
+RETURNS float
+BEGIN
+
+Declare @Importance varchar(20);
+select top 1 @Importance = RiskRating from tblRiskRating 
+	where ContentId=@WeighingId;
+
+    RETURN (CASE 
+	when isnull(@RAGId,0)>0 
+	then
+	isnull((select top 1 [RED] from [tblKCIRating] 
+	WHERE Importance=@Importance),0)
+	 else
+	  0 
+	  end
+	  )
+END
+
+
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnCheckRagConstraints]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnCheckRagConstraints]
+(@RA_Red_Opt1 int =null,
+  @RA_Red_Val1 float=null,
+    @RA_Red_Opt2 int =null,
+  @RA_Red_Val2 float=null,
+    @RA_Amber_Opt1 int =null,
+  @RA_Amber_Val1 float=null,
+    @RA_Amber_Opt2 int =null,
+  @RA_Amber_Val2 float=null,
+    @RA_Green_Opt1 int =null,
+  @RA_Green_Val1 float=null,
+    @RA_Green_Opt2 int =null,
+  @RA_Green_Val2 float=null,@InputPerformanceValue float = null)
+RETURNS INT
+BEGIN
+DECLARE @RagId int;
+
+
+ --To Check Constraints for RED
+	  if(isnull(@RA_Red_Opt1,0) >0 or isnull(@RA_Red_Opt2,0)>0)
+	  begin
+
+	  if(isnull(@RA_Red_Opt1,0) >0 and isnull(@RA_Red_Opt2,0)>0)
+	  begin
+
+	  if((select dbo.fnLogicalOperator(@RA_Red_Opt1,@InputPerformanceValue,@RA_Red_Val1)) =1 
+	  and (select dbo.fnLogicalOperator(@RA_Red_Opt2,@InputPerformanceValue,@RA_Red_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Red : 1
+	  SET @RagId=1;
+	  end
+	  end
+
+	  else if(isnull(@RA_Red_Opt1,0) >0 and isnull(@RA_Red_Opt2,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Red_Opt1,@InputPerformanceValue,@RA_Red_Val1)) =1)
+	  begin
+
+	  ---Set RagId for Red : 1
+	  SET @RagId=1;
+	  end
+	  end
+
+	  else if(isnull(@RA_Red_Opt2,0)>0 and isnull(@RA_Red_Opt1,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Red_Opt2,@InputPerformanceValue,@RA_Red_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Red : 1
+	  SET @RagId=1;
+	  end
+	  end
+
+	  end    
+
+
+	  	  --To Check Constraints for Amber
+	  if(isnull(@RA_Amber_Opt1,0) >0 or isnull(@RA_Amber_Opt2,0)>0)
+	  begin
+
+	  if(isnull(@RA_Amber_Opt1,0) >0 and isnull(@RA_Amber_Opt2,0)>0)
+	  begin
+
+	  if((select dbo.fnLogicalOperator(@RA_Amber_Opt1,@InputPerformanceValue,@RA_Amber_Val1)) =1 
+	  and (select dbo.fnLogicalOperator(@RA_Amber_Opt2,@InputPerformanceValue,@RA_Amber_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Amber : 2
+	  SET @RagId=2;
+	  end
+	  end
+
+	  else if(isnull(@RA_Amber_Opt1,0) >0 and isnull(@RA_Amber_Opt2,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Amber_Opt1,@InputPerformanceValue,@RA_Amber_Val1)) =1)
+	  begin
+
+	  ---Set RagId for Amber : 2
+	  SET @RagId=2;
+	  end
+	  end
+
+	  else if(isnull(@RA_Amber_Opt2,0)>0 and isnull(@RA_Amber_Opt1,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Amber_Opt2,@InputPerformanceValue,@RA_Amber_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Amber : 2
+	  SET @RagId=2;
+	  end
+	  end
+
+	  end
+
+
+	    --To Check Constraints for Green
+	  if(isnull(@RA_Green_Opt1,0) >0 or isnull(@RA_Green_Opt2,0)>0)
+	  begin
+
+	  if(isnull(@RA_Green_Opt1,0) >0 and isnull(@RA_Green_Opt2,0)>0)
+	  begin
+
+	  if((select dbo.fnLogicalOperator(@RA_Green_Opt1,@InputPerformanceValue,@RA_Green_Val1)) =1 
+	  and (select dbo.fnLogicalOperator(@RA_Green_Opt2,@InputPerformanceValue,@RA_Green_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Green : 3
+	  SET @RagId=3;
+	  end
+	  end
+
+	  else if(isnull(@RA_Green_Opt1,0) >0 and isnull(@RA_Green_Opt2,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Green_Opt1,@InputPerformanceValue,@RA_Green_Val1)) =1)
+	  begin
+
+	  ---Set RagId for Green : 3
+	  SET @RagId=3;
+	  end
+	  end
+
+	  else if(isnull(@RA_Green_Opt2,0)>0 and isnull(@RA_Green_Opt1,0)=0)
+	  begin
+
+	    if((select dbo.fnLogicalOperator(@RA_Green_Opt2,@InputPerformanceValue,@RA_Green_Val2)) =1)
+	  begin
+
+	  ---Set RagId for Green : 3
+	  SET @RagId=3;
+	  end
+	  end
+
+	  end
+
+
+    RETURN @RagId;
+END
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnGetImportanceScore]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnGetImportanceScore]
+(@ImportanceId int)
+RETURNS int
+BEGIN
+Declare @Score  int;
+DECLARE @KI_Val varchar(50);
+SET @Score = (select Isnull(Importance_Score,0) from tblKCIRating 
+where Contentid=@ImportanceId);
+return @Score;						 
+END
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[fnLogicalOperator]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[fnLogicalOperator]
+(@OperatorId int,@ValueToCompare float,@ReferenceValue float)
+RETURNS int
+BEGIN
+Declare @result int=0;
+
+if (isnull(@OperatorId,0)>0)
+begin
+
+--- '>'
+if (@OperatorId=1)
+begin
+
+if(isnull(@ValueToCompare,0) > isnull(@ReferenceValue,0))
+begin
+set @result=1;
+end
+else
+begin
+set @result=0;
+end
+
+end
+
+--'<'
+else if (@OperatorId=2)
+begin
+
+if(isnull(@ValueToCompare,0) < isnull(@ReferenceValue,0))
+begin
+set @result=1;
+end
+else
+begin
+set @result=0;
+end
+
+end
+
+--'='
+else if (@OperatorId=3)
+begin
+
+if(isnull(@ValueToCompare,0) = isnull(@ReferenceValue,0))
+begin
+set @result=1;
+end
+else
+begin
+set @result=0;
+end
+
+end
+
+--'>='
+else if (@OperatorId=4)
+begin
+
+if(isnull(@ValueToCompare,0) >= isnull(@ReferenceValue,0))
+begin
+set @result=1;
+end
+else
+begin
+set @result=0;
+end
+
+end
+
+--'<='
+else if (@OperatorId=5)
+begin
+
+if(isnull(@ValueToCompare,0) <= isnull(@ReferenceValue,0))
+begin
+set @result=1;
+end
+else
+begin
+set @result=0;
+end
+
+end
+
+end
+
+
+    RETURN @result;
+END
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[INSTR]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ -- User-defined function to implement Oracle INSTR in SQL Server
+  CREATE FUNCTION [dbo].[INSTR] (@str VARCHAR(8000), @substr VARCHAR(255), @start INT, @occurrence INT)
+  RETURNS INT
+  AS
+  BEGIN
+	DECLARE @found INT = @occurrence,
+			@pos INT = @start;
+ 
+	WHILE 1=1 
+	BEGIN
+		-- Find the next occurrence
+		SET @pos = CHARINDEX(@substr, @str, @pos);
+ 
+		-- Nothing found
+		IF @pos IS NULL OR @pos = 0
+			RETURN @pos;
+ 
+		-- The required occurrence found
+		IF @found = 1
+			BREAK;
+ 
+		-- Prepare to find another one occurrence
+		SET @found = @found - 1;
+		SET @pos = @pos + 1;
+	END
+ 
+	RETURN @pos;
+  END
+
+
+GO
+/****** Object:  UserDefinedFunction [dbo].[SplitString]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE FUNCTION [dbo].[SplitString]
+(    
+      @Input NVARCHAR(MAX),
+      @Character CHAR(1)
+)
+RETURNS @Output TABLE (
+      Item NVARCHAR(1000)
+)
+AS
+BEGIN
+      DECLARE @StartIndex INT, @EndIndex INT
+ 
+      SET @StartIndex = 1
+      IF SUBSTRING(@Input, LEN(@Input) - 1, LEN(@Input)) <> @Character
+      BEGIN
+            SET @Input = @Input + @Character
+      END
+ 
+      WHILE CHARINDEX(@Character, @Input) > 0
+      BEGIN
+            SET @EndIndex = CHARINDEX(@Character, @Input)
+           
+            INSERT INTO @Output(Item)
+            SELECT SUBSTRING(@Input, @StartIndex, @EndIndex - 1)
+           
+            SET @Input = SUBSTRING(@Input, @EndIndex + 1, LEN(@Input))
+      END
+ 
+      RETURN
+END
+
+
+GO
+/****** Object:  Table [dbo].[DimDate]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[DimDate](
+	[DateKey] [int] NOT NULL,
+	[Date] [datetime] NULL,
+	[FullDateUK] [char](10) NULL,
+	[FullDateUSA] [char](10) NULL,
+	[DayOfMonth] [varchar](2) NULL,
+	[DaySuffix] [varchar](4) NULL,
+	[DayName] [varchar](9) NULL,
+	[DayOfWeekUSA] [char](1) NULL,
+	[DayOfWeekUK] [char](1) NULL,
+	[DayOfWeekInMonth] [varchar](2) NULL,
+	[DayOfWeekInYear] [varchar](2) NULL,
+	[DayOfQuarter] [varchar](3) NULL,
+	[DayOfYear] [varchar](3) NULL,
+	[WeekOfMonth] [varchar](1) NULL,
+	[WeekOfQuarter] [varchar](2) NULL,
+	[WeekOfYear] [varchar](2) NULL,
+	[Month] [varchar](2) NULL,
+	[MonthName] [varchar](9) NULL,
+	[MonthOfQuarter] [varchar](2) NULL,
+	[Quarter] [char](1) NULL,
+	[QuarterName] [varchar](9) NULL,
+	[Year] [char](4) NULL,
+	[YearName] [char](7) NULL,
+	[MonthYear] [char](10) NULL,
+	[MMYYYY] [char](6) NULL,
+	[FirstDayOfMonth] [date] NULL,
+	[LastDayOfMonth] [date] NULL,
+	[FirstDayOfQuarter] [date] NULL,
+	[LastDayOfQuarter] [date] NULL,
+	[FirstDayOfYear] [date] NULL,
+	[LastDayOfYear] [date] NULL,
+	[IsHolidayUSA] [bit] NULL,
+	[IsWeekday] [bit] NULL,
+	[HolidayUSA] [varchar](50) NULL,
+	[IsHolidayUK] [bit] NULL,
+	[HolidayUK] [varchar](50) NULL,
+	[FiscalDayOfYear] [varchar](3) NULL,
+	[FiscalWeekOfYear] [varchar](3) NULL,
+	[FiscalMonth] [varchar](2) NULL,
+	[FiscalQuarter] [char](1) NULL,
+	[FiscalQuarterName] [varchar](9) NULL,
+	[FiscalYear] [char](4) NULL,
+	[FiscalYearName] [char](7) NULL,
+	[FiscalMonthYear] [char](10) NULL,
+	[FiscalMMYYYY] [char](6) NULL,
+	[FiscalFirstDayOfMonth] [date] NULL,
+	[FiscalLastDayOfMonth] [date] NULL,
+	[FiscalFirstDayOfQuarter] [date] NULL,
+	[FiscalLastDayOfQuarter] [date] NULL,
+	[FiscalFirstDayOfYear] [date] NULL,
+	[FiscalLastDayOfYear] [date] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[RasFormattedData]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RasFormattedData](
+	[MaterialRisk] [nvarchar](255) NULL,
+	[RiskTheme] [nvarchar](255) NULL,
+	[Metric] [nvarchar](255) NULL,
+	[Risk appetite limit] [nvarchar](255) NULL,
+	[RA_dimension] [nvarchar](255) NULL,
+	[RA_Red_Opt1] [nvarchar](255) NULL,
+	[RA_Red_Val1] [decimal](10, 2) NULL,
+	[RA_Red_Opt2] [nvarchar](255) NULL,
+	[RA_Red_Val2] [decimal](10, 2) NULL,
+	[RA_Amber_Opt1] [nvarchar](255) NULL,
+	[RA_Amber_Val1] [decimal](10, 2) NULL,
+	[RA_Amber_Opt2] [nvarchar](255) NULL,
+	[RA_Amber_Val2] [decimal](10, 2) NULL,
+	[RA_Green_Opt1] [nvarchar](255) NULL,
+	[RA_Green_Val1] [decimal](10, 2) NULL,
+	[RA_Green_Opt2] [nvarchar](255) NULL,
+	[RA_Green_Val2] [decimal](10, 2) NULL,
+	[DataSource] [nvarchar](255) NULL,
+	[DataOwner] [nvarchar](255) NULL,
+	[BankWideTool] [nvarchar](255) NULL,
+	[DataSourceMode] [nvarchar](255) NULL,
+	[Weighting] [nvarchar](255) NULL,
+	[KRIPerformance] [decimal](10, 2) NULL,
+	[KRI_RAG] [nvarchar](255) NULL,
+	[KRI_Indicator] [int] NULL,
+	[KRI_Potential] [decimal](10, 2) NULL,
+	[Actual_Potential] [decimal](10, 2) NULL,
+	[KRI_Score] [decimal](10, 2) NULL,
+	[KRI_DQ] [nvarchar](255) NULL,
+	[DQ_Score] [decimal](10, 2) NULL,
+	[KRI_DQ_Score] [decimal](10, 2) NULL,
+	[IsActive] [int] NULL
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [dbo].[tblExecSummaryPapersRAS]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblExecSummaryPapersRAS](
+	[SummaryId] [int] IDENTITY(1,1) NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[FilePath] [varchar](512) NOT NULL,
+	[FileName] [varchar](256) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblExecSummaryPapersRAS_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+ CONSTRAINT [PK_tblExecSummaryPapersRAS] PRIMARY KEY CLUSTERED 
+(
+	[SummaryId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblExecutiveSummaryNotes_CallOuts]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblExecutiveSummaryNotes_CallOuts](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[ImportantNote] [varchar](128) NULL,
+	[InternalCallOuts] [ntext] NULL,
+	[ExternalCallOuts] [ntext] NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblExecutiveSummaryNotes_CallOuts_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+ CONSTRAINT [PK_tblExecutiveSummaryNotes_CallOuts] PRIMARY KEY CLUSTERED 
+(
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblKCIRating]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblKCIRating](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Importance] [varchar](50) NOT NULL,
+	[Red] [decimal](10, 2) NOT NULL,
+	[Amber] [decimal](10, 2) NOT NULL,
+	[Green] [decimal](10, 2) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblKCIRating_CreatedDate]  DEFAULT (getutcdate()),
+	[Importance_Score] [int] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblLogicalOperators]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblLogicalOperators](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Operator] [varchar](50) NOT NULL,
+	[Description] [varchar](255) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblLogicalOperators_CreatedDate]  DEFAULT (getutcdate())
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMaterialRiskActionSummary]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING OFF
+GO
+CREATE TABLE [dbo].[tblMaterialRiskActionSummary](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[ActionSummary] [ntext] NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+ CONSTRAINT [PK_tblMaterialRiskActionSummary] PRIMARY KEY CLUSTERED 
+(
+	[MaterialRiskId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMaterialRiskAvailability]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMaterialRiskAvailability](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF_tblMaterialRiskAvailability_IsActive]  DEFAULT ((1)),
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMaterialRiskAvailability_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+ CONSTRAINT [PK_tblMaterialRiskAvailability] PRIMARY KEY CLUSTERED 
+(
+	[MaterialRiskId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMaterialRiskPerformance]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMaterialRiskPerformance](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[ZoneContextId] [int] NOT NULL CONSTRAINT [DF__tblMateri__ZoneC__1ABEEF0B]  DEFAULT ((0)),
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[CE_RATING] [float] NULL,
+	[Aggt_CE_Impact] [float] NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMaterialRiskPerformance_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[ActionSummary] [ntext] NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+ CONSTRAINT [PK_tblMaterialRiskPerformance] PRIMARY KEY CLUSTERED 
+(
+	[MaterialRiskId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMaterialRisks]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMaterialRisks](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [varchar](128) NOT NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMaterialRisks_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF_tblMaterialRisks_IsActive]  DEFAULT ((1)),
+	[Financial_Impact] [int] NULL,
+	[Customer_Impact] [int] NULL,
+	[Reputation_Legal_Impact] [int] NULL,
+	[Priority_Materialising] [int] NULL,
+	[TotalPoints] [int] NULL,
+	[Percent_TotalScore] [float] NULL,
+	[MI_Completeness_Quality] [int] NULL,
+	[Aggt_Potential] [float] NULL,
+	[RA_Owner] [varchar](128) NULL,
+	[UpdateCycle] [varchar](50) NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMaterialWiseRiskThemePerformance]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMaterialWiseRiskThemePerformance](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[RiskThemeId] [int] NOT NULL,
+	[ZoneContextId] [int] NOT NULL CONSTRAINT [DF_tblMaterialWiseRiskThemePerformance_ZoneContextId]  DEFAULT ((0)),
+	[RegionId] [int] NOT NULL CONSTRAINT [DF_tblMaterialWiseRiskThemePerformance_RegionId]  DEFAULT ((0)),
+	[SLTId] [int] NOT NULL CONSTRAINT [DF_tblMaterialWiseRiskThemePerformance_SLTId]  DEFAULT ((0)),
+	[CE_Rating] [float] NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMaterialWiseRiskThemePerformance_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+ CONSTRAINT [PK_tblMaterialWiseRiskThemePerformance] PRIMARY KEY CLUSTERED 
+(
+	[MaterialRiskId] ASC,
+	[RiskThemeId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMCARating]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMCARating](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[KI] [varchar](50) NOT NULL,
+	[Red] [decimal](10, 2) NOT NULL,
+	[Amber] [decimal](10, 2) NOT NULL,
+	[Green] [decimal](10, 2) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMCARating_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMCRTUsers]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMCRTUsers](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RacfId] [varchar](50) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMCRTUsers_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[IsMCPTeamMember] [int] NULL CONSTRAINT [DF_tblMCRTUsers_IsMCPTeamMember]  DEFAULT ((0)),
+	[IsActive] [int] NULL CONSTRAINT [DF_tblMCRTUsers_IsActive]  DEFAULT ((1)),
+ CONSTRAINT [PK_tblMCRTUsers] PRIMARY KEY CLUSTERED 
+(
+	[RacfId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMetrics]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMetrics](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Metric] [nvarchar](512) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMetrics_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMetricWiseComments]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMetricWiseComments](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RasMetricId] [int] NOT NULL,
+	[Comment] [nvarchar](512) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMetricWiseComments_CreatedDate]  DEFAULT (getutcdate()),
+	[ParentCommentId] [int] NULL DEFAULT ((0))
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMetricWiseRiskAppetiteLimit]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMetricWiseRiskAppetiteLimit](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RasMetricId] [int] NOT NULL,
+	[RA_Red_Opt1] [int] NULL,
+	[RA_Red_Val1] [float] NULL,
+	[RA_Red_Opt2] [int] NULL,
+	[RA_Red_Val2] [float] NULL,
+	[RA_Amber_Opt1] [int] NULL,
+	[RA_Amber_Val1] [float] NULL,
+	[RA_Amber_Opt2] [int] NULL,
+	[RA_Amber_Val2] [float] NULL,
+	[RA_Green_Opt1] [int] NULL,
+	[RA_Green_Val1] [float] NULL,
+	[RA_Green_Opt2] [int] NULL,
+	[RA_Green_Val2] [float] NULL,
+	[Records_Opt1] [int] NULL,
+	[Records_Val1] [int] NULL,
+	[Records_Opt2] [int] NULL,
+	[Records_Val2] [int] NULL,
+	[Remark] [varchar](255) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblMetricWiseRiskAppetiteLimit_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF_tblMetricWiseRiskAppetiteLimit_IsActive]  DEFAULT ((1)),
+	[WeekKey] [varchar](50) NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblMonthDim]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblMonthDim](
+	[ContentID] [int] IDENTITY(1,1) NOT NULL,
+	[Year] [int] NOT NULL,
+	[Month] [int] NOT NULL,
+	[mKey] [varchar](50) NOT NULL,
+	[MonthLabel] [varchar](128) NULL,
+	[Format1] [varchar](50) NULL,
+	[Format2] [varchar](50) NULL,
+ CONSTRAINT [PK_tblMonthDim] PRIMARY KEY CLUSTERED 
+(
+	[mKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblNWMCECLog]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblNWMCECLog](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[ZoneContextId] [int] NOT NULL CONSTRAINT [DF_tblNWMCECLog_ZoneContextId]  DEFAULT ((0)),
+	[RegionId] [int] NOT NULL CONSTRAINT [DF_tblNWMCECLog_RegionId]  DEFAULT ((0)),
+	[SLTId] [int] NOT NULL CONSTRAINT [DF_tblNWMCECLog_SLTId]  DEFAULT ((0)),
+	[CE_Rating] [float] NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblNWMCECLog_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+ CONSTRAINT [PK_tblNWMCECLog] PRIMARY KEY CLUSTERED 
+(
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRags]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRags](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Rag] [varchar](10) NOT NULL,
+	[Description] [varchar](128) NULL,
+	[CreatedDate] [datetime] NULL DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRasCalender]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRasCalender](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Year] [int] NULL,
+	[Month] [int] NULL,
+	[UpdateDate] [datetime] NULL,
+	[TargettedWeekNo] [int] NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRasMetricPerformance]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRasMetricPerformance](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RasmetricId] [int] NOT NULL,
+	[KRIPerformance] [nvarchar](512) NULL,
+	[KRI_Performance_RawValue] [float] NULL,
+	[KRI_Performance_NoOfRecords] [int] NULL,
+	[RAGId] [int] NULL,
+	[KRIRemark] [nvarchar](512) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRasMetricPerformance_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[KRI_Potential] [float] NULL,
+	[Actual_Potential] [float] NULL,
+	[KRI_Score] [float] NULL,
+	[DQ_Score] [float] NULL,
+	[KRI_DQ_Score] [float] NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF__tblRasMet__IsAct__00FF1D08]  DEFAULT ((0)),
+	[WeekKey] [varchar](50) NOT NULL,
+	[DataSource] [varchar](128) NULL,
+	[DataOwner] [varchar](256) NULL,
+	[DataSourceMode] [varchar](50) NULL,
+	[BankWideTool] [varchar](50) NULL,
+	[WeighingId] [int] NULL,
+	[KRI_DQ] [int] NULL,
+ CONSTRAINT [PK_tblRasMetricPerformance] PRIMARY KEY CLUSTERED 
+(
+	[RasmetricId] ASC,
+	[WeekKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRASMetrics]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRASMetrics](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[RiskThemeId] [int] NOT NULL,
+	[MetricId] [int] NOT NULL,
+	[DimensionId] [int] NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF_tblRASMetrics_IsActive]  DEFAULT ((1)),
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRASMetrics_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[IsPerformanceAutomated] [int] NULL CONSTRAINT [DF__tblRASMet__IsPer__17036CC0]  DEFAULT ((0)),
+	[TierId] [int] NULL,
+	[PowerBIReportId] [varchar](50) NULL,
+	[PowerBIReportPage] [varchar](128) NULL,
+	[DSSViewName] [varchar](128) NULL,
+ CONSTRAINT [PK_tblRASMetrics] PRIMARY KEY CLUSTERED 
+(
+	[MaterialRiskId] ASC,
+	[RiskThemeId] ASC,
+	[MetricId] ASC,
+	[DimensionId] ASC,
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRegion]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRegion](
+	[RegionId] [int] NOT NULL,
+	[Region] [varchar](50) NOT NULL,
+	[IsActive] [int] NULL DEFAULT ((0))
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRiskAppetiteDimensions]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRiskAppetiteDimensions](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Dimension] [varchar](128) NULL,
+	[Description] [varchar](256) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRiskAppetiteDimensions_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRiskProfile]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRiskProfile](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[ZoneContextId] [int] NOT NULL,
+	[RegionId] [int] NOT NULL,
+	[SLTId] [int] NOT NULL,
+	[NoOfPastDues] [int] NULL,
+	[NoOfMajorExt] [int] NULL,
+	[GNEPs] [int] NULL,
+	[MajorAddressing] [int] NULL,
+	[SigAddressing] [int] NULL,
+	[MonthKey] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF__tblRiskPr__Creat__4D4A6ED8]  DEFAULT (getutcdate()),
+ CONSTRAINT [PK_tblRiskProfile] PRIMARY KEY CLUSTERED 
+(
+	[ZoneContextId] ASC,
+	[RegionId] ASC,
+	[SLTId] ASC,
+	[MonthKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRiskRating]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRiskRating](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RiskRating] [varchar](50) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRiskRating_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+ CONSTRAINT [PK_tblRiskRating] PRIMARY KEY CLUSTERED 
+(
+	[RiskRating] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRiskThemes]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRiskThemes](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RiskTheme] [varchar](128) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRiskThemes_CreatedDate]  DEFAULT (getutcdate()),
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[IsActive] [int] NULL CONSTRAINT [DF_tblRiskThemes_IsActive]  DEFAULT ((1)),
+	[ShortLabel] [varchar](128) NULL,
+ CONSTRAINT [tblRiskTheme_Theme_Unq] UNIQUE NONCLUSTERED 
+(
+	[RiskTheme] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblRoleMaster]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblRoleMaster](
+	[RoleId] [int] IDENTITY(1,1) NOT NULL,
+	[RoleType] [varchar](128) NOT NULL,
+	[RoleDesc] [varchar](256) NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblRoleMaster_CreatedDate]  DEFAULT (getutcdate()),
+	[IsActive] [int] NULL CONSTRAINT [DF_tblRoleMaster_IsActive]  DEFAULT ((1))
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblSLTs]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblSLTs](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[SLTName] [varchar](128) NOT NULL,
+	[IsActive] [int] NULL DEFAULT ((0))
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblUserRoles]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblUserRoles](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[UserId] [int] NOT NULL,
+	[RoleId] [int] NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblUserRoles_CreatedDate]  DEFAULT (getutcdate()),
+	[IsActive] [int] NULL CONSTRAINT [DF_tblUserRoles_IsActive]  DEFAULT ((1))
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblWeekDimUK]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblWeekDimUK](
+	[ContentID] [int] IDENTITY(1,1) NOT NULL,
+	[Year] [int] NOT NULL,
+	[Month] [int] NOT NULL,
+	[WeekOfMonth] [int] NOT NULL,
+	[wKey] [varchar](50) NOT NULL,
+	[WeekLabel] [varchar](128) NULL,
+	[mKey] [varchar](50) NULL,
+ CONSTRAINT [PK_tblWeekDimUK] PRIMARY KEY CLUSTERED 
+(
+	[wKey] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tblZoneContextMaster]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tblZoneContextMaster](
+	[ContextId] [int] IDENTITY(1,1) NOT NULL,
+	[ContextName] [varchar](128) NOT NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL CONSTRAINT [DF_tblZoneContextMaster_CreatedDate]  DEFAULT (getutcdate()),
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tempRasData]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tempRasData](
+	[MaterialRiskId] [int] NULL,
+	[MaterialRisk] [varchar](255) NULL,
+	[RiskThemeId] [int] NULL,
+	[RiskTheme] [varchar](255) NULL,
+	[MetricId] [int] NULL,
+	[Metric] [nvarchar](255) NULL,
+	[DimensionId] [int] NULL,
+	[DataSource] [varchar](255) NULL,
+	[DataOwner] [varchar](255) NULL,
+	[BankWideTool] [varchar](255) NULL,
+	[DataSourceMode] [varchar](255) NULL,
+	[WeighingId] [int] NULL,
+	[Weighting] [varchar](255) NULL,
+	[KRIPerformance] [nvarchar](512) NULL,
+	[RagId] [int] NULL,
+	[KRI_RAG] [varchar](255) NULL,
+	[KRI_Indicator] [int] NULL,
+	[KRI_Potential] [float] NULL,
+	[Actual_Potential] [float] NULL,
+	[KRI_Score] [float] NULL,
+	[KRI_DQ_Id] [int] NULL,
+	[KRI_DQ] [varchar](255) NULL,
+	[DQ_Score] [float] NULL,
+	[KRI_DQ_Score] [float] NULL,
+	[IsActive] [int] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[tempRiskAppetiteLimit]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[tempRiskAppetiteLimit](
+	[RasMetricId] [int] NULL,
+	[MaterialRisk] [varchar](255) NULL,
+	[RiskTheme] [varchar](255) NULL,
+	[Metric] [nvarchar](255) NULL,
+	[Risk appetite limit] [nvarchar](255) NULL,
+	[RA_dimension] [int] NULL,
+	[RA_Red_Opt1] [varchar](255) NULL,
+	[RA_Red_Val1] [float] NULL,
+	[RA_Red_Opt2] [varchar](255) NULL,
+	[RA_Red_Val2] [float] NULL,
+	[RA_Amber_Opt1] [varchar](255) NULL,
+	[RA_Amber_Val1] [float] NULL,
+	[RA_Amber_Opt2] [varchar](255) NULL,
+	[RA_Amber_Val2] [float] NULL,
+	[RA_Green_Opt1] [varchar](255) NULL,
+	[RA_Green_Val1] [float] NULL,
+	[RA_Green_Opt2] [varchar](255) NULL,
+	[RA_Green_Val2] [float] NULL,
+	[Records_Opt1] [varchar](255) NULL,
+	[Records_Val1] [int] NULL,
+	[Records_Opt2] [varchar](255) NULL,
+	[Records_Val2] [int] NULL,
+	[Remark] [varchar](255) NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[temptblRASMetrics]    Script Date: 08-09-2017 16:13:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[temptblRASMetrics](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[Metric] [nvarchar](512) NOT NULL,
+	[MetricId] [int] NULL,
+	[MaterialRiskId] [int] NOT NULL,
+	[RiskThemeId] [int] NOT NULL,
+	[RA_Dimension] [varchar](50) NULL,
+	[DimensionId] [int] NULL,
+	[RA_Red_Opt1] [varchar](50) NULL,
+	[RA_Red_Val1] [float] NULL,
+	[RA_Red_Opt2] [varchar](50) NULL,
+	[RA_Red_Val2] [float] NULL,
+	[RA_Amber_Opt1] [varchar](50) NULL,
+	[RA_Amber_Val1] [float] NULL,
+	[RA_Amber_Opt2] [varchar](50) NULL,
+	[RA_Amber_Val2] [float] NULL,
+	[RA_Green_Opt1] [varchar](50) NULL,
+	[RA_Green_Val1] [float] NULL,
+	[RA_Green_Opt2] [varchar](50) NULL,
+	[RA_Green_Val2] [float] NULL,
+	[DataSource] [varchar](128) NULL,
+	[DataOwner] [varchar](256) NULL,
+	[DataSourceMode] [varchar](50) NULL,
+	[BankWideTool] [varchar](50) NULL,
+	[WeighingId] [int] NULL,
+	[KRIPerformance] [nvarchar](512) NULL,
+	[RAGId] [int] NULL,
+	[KRI_Potential] [float] NULL,
+	[Actual_Potential] [float] NULL,
+	[KRI_Score] [float] NULL,
+	[KRI_DQ] [int] NULL,
+	[DQ_Score] [float] NULL,
+	[KRI_DQ_Score] [float] NULL,
+	[IsActive] [int] NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+ALTER TABLE [dbo].[tblRasCalender] ADD  CONSTRAINT [DF_tblRasCalender_CreatedDate]  DEFAULT (getutcdate()) FOR [CreatedDate]
+GO
