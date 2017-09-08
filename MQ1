@@ -1,0 +1,331 @@
+
+
+select * from MCRT..tblMetrics   where
+Metric like '% of people who fail ethical phishing tests'
+% of closed P1/ P2 problem records where solution has not been identified across NWM servicesapplications in 60 days
+% of closed P1/ P2 problem records where solution has not been identified across NWM services applications in 60 days
+
+% of P1/ P2 problem records open > 30 days with no confirmed root cause across NWM services applications
+
+update  tblMetrics set Metric='% of Tier 2 systems below 99.95% availability' where contentid=65
+
+update  mcrt..tblMetrics set Metric=ltrim(rtrim(Metric))
+
+[GetRasMetricsDashboard] 7,1,0,0,1,0,1,'20170605'
+
+select * from mcrt..tblMaterialRisks
+select * from mcrt..tblRiskThemes
+
+select distinct MaterialRiskId from mcrt..tblRASMetrics 
+where RiskThemeId=13 
+and MetricId=63
+
+select * from mcrt..tblRASMetrics 
+where MaterialRiskId=1 and MetricId=1136  and RiskThemeId=5  
+
+update MCRT..tblRASMetrics set PowerBIReportPage='ITS_AVL_App_Tier2' where PowerBIReportPage='ITS_AVL_App_Tier_2'
+select * from MCRT..tblRASMetrics where PowerBIReportPage='ITS_AVL_App_CIA'
+MaterialRiskId in (5,6,7)
+and RiskThemeId=11 
+and MetricId=1
+
+3-66
+13-71
+1-68
+2-69
+14-72
+4-67
+
+update tblRASMetrics 
+set MetricId= case Isnull(MetricId,0) when 
+66 then 3 when 71 then 13 when 68 then 1 when 69 then 2 when 72 then 14 when 67 then 4 else MetricId end 
+whew
+
+insert into  MCRT..tblMetrics(Metric)
+Select '% of people who fail ethical phishing tests'
+PRINT SCOPE_IDEntity()
+
+Select * from MCRT..tblMetricWiseRiskAppetiteLimit where RasMetricId in (select contentid from mcrt..tblRASMetrics 
+where MaterialRiskId=1
+and RiskThemeId=9 
+and MetricId=30)   
+
+
+update MCRT..tblMetricWiseRiskAppetiteLimit set 
+RA_Amber_Opt1=null,RA_Amber_Opt2=null,RA_Amber_Val1=null,RA_Amber_Val2=null,
+RA_Green_Opt1=3,RA_Green_Val1=0,RA_Red_Opt1=1,RA_Red_Val1=0
+where RasMetricId in (select contentid from mcrt..tblRASMetrics 
+where MaterialRiskId=1
+and RiskThemeId=9 
+and MetricId=30)    
+
+
+Insert into mcrt..tblRASMetrics
+select MaterialRiskId
+      ,RiskThemeId
+      ,1136
+      ,[DimensionId]
+      ,[ZoneContextId]
+      ,[RegionId]
+      ,[SLTId]
+      ,[IsActive]
+      ,[CreatedBy]
+      ,[CreatedDate]
+      ,[ModifiedBy]
+      ,[ModifiedDate]
+      ,[IsPerformanceAutomated]
+      ,[TierId]
+      ,[PowerBIReportId]
+      ,[PowerBIReportPage]
+      ,[DSSViewName]
+  FROM [MCRT].[dbo].[tblRASMetrics]
+  where MaterialRiskId=1
+and RiskThemeId=5 
+and MetricId=23
+
+
+INSERT into mcrt..tblRasMetricPerformance([RasmetricId]
+      ,[KRIPerformance]
+      ,[KRI_Performance_RawValue]
+      ,[KRI_Performance_NoOfRecords]
+      ,[RAGId]
+      ,[KRIRemark]
+      ,[CreatedDate]
+      ,[CreatedBy]
+       ,[KRI_Potential]
+      ,[Actual_Potential]
+      ,[KRI_Score]
+      ,[DQ_Score]
+      ,[KRI_DQ_Score]
+      ,[IsActive]
+      ,[WeekKey]
+      ,[DataSource]
+      ,[DataOwner]
+      ,[DataSourceMode]
+      ,[BankWideTool]
+      ,[WeighingId]
+      ,[KRI_DQ])
+
+	 
+
+
+	  select contentid
+      ,'22.52%'
+      ,22.52
+      ,null
+      ,1
+      ,null
+      ,GETUTCDATE()
+      ,'FM\rustroh'
+      ,0
+      ,0
+      ,0
+      ,0
+      ,0
+      ,1
+      ,'20170605'
+      ,null
+      ,null
+      ,null
+      ,null
+      ,null
+      ,1 from mcrt..tblRASMetrics 
+where MaterialRiskId=1
+and RiskThemeId=5 
+and MetricId in (1136)
+
+INSERT into mcrt..tblMetricWiseRiskAppetiteLimit([RasMetricId]
+      ,[RA_Red_Opt1]
+      ,[RA_Red_Val1]
+      ,[RA_Red_Opt2]
+      ,[RA_Red_Val2]
+      ,[RA_Amber_Opt1]
+      ,[RA_Amber_Val1]
+      ,[RA_Amber_Opt2]
+      ,[RA_Amber_Val2]
+      ,[RA_Green_Opt1]
+      ,[RA_Green_Val1]
+      ,[RA_Green_Opt2]
+      ,[RA_Green_Val2]
+      ,[Records_Opt1]
+      ,[Records_Val1]
+      ,[Records_Opt2]
+      ,[Records_Val2]
+      ,[Remark]
+      ,[IsActive]
+      ,[WeekKey])
+ select contentid
+      ,4
+      ,10
+      ,5
+      ,100
+      ,null
+      ,null
+      ,null
+      ,null
+      ,4
+      ,0
+      ,2
+      ,10
+      ,null
+      ,null
+      ,null
+      ,null
+      ,null
+      ,1
+      ,'20170605' from mcrt..tblRASMetrics 
+where MaterialRiskId=1
+and RiskThemeId=5 
+and MetricId in (1136)
+
+
+update tblRasMetrics set DimensionId=1 where MaterialRiskId=4
+and RiskThemeId=18 and MetricId in (94)
+
+
+74,75,76,77
+delete from tblRasMetricPerformance where RasmetricId in (select contentid from mcrt..tblRASMetrics 
+where MaterialRiskId=3
+and RiskThemeId=17 and MetricId in (58))
+
+delete from tblMetricWiseRiskAppetiteLimit where RasMetricId in (select contentid from mcrt..tblRASMetrics 
+where MaterialRiskId=3
+and RiskThemeId=17 and MetricId in (58))
+
+delete from mcrt..tblRASMetrics 
+where MaterialRiskId=3
+and RiskThemeId=17 and MetricId in (58)
+
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='INFO_TVM_Phishing',
+DSSViewName='vINFO_TVM_Phishing'
+where MaterialRiskId=1 and RiskThemeId=5 
+and MetricId=1136
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='OS_Contract_Gov_P2PVendorOS_UnApproved_NoOfInvoices',
+DSSViewName='vOS_Contract_Gov_P2PVendorOS'
+where MaterialRiskId=6 and RiskThemeId=13 
+and MetricId=106
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='OS_Contract_Gov_P2PVendorOS_UnApproved_ValueOfInvoices',
+DSSViewName='vOS_Contract_Gov_P2PVendorOS'
+where MaterialRiskId=6 and RiskThemeId=13 and MetricId=105
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='OS_Contract_Gov_P2PVendorOS_ValueOfInvoices',
+DSSViewName='vOS_Contract_Gov_P2PVendorOS'
+where MaterialRiskId=6 and RiskThemeId=13 
+and MetricId=104
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='TOHR_Open_Issues_Significant',
+DSSViewName='vTOHRTable'
+where RiskThemeId=11 
+and MetricId=4
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='TOHR_Open_Issues_PastDues_Major',
+DSSViewName='vTOHRTable'
+where RiskThemeId=11 
+and MetricId=13
+
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='TOHR_Open_Issues_PastDues_Significant',
+DSSViewName='vTOHRTable'
+where RiskThemeId=11 
+and MetricId=14
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='TOHR_Open_Issues_ExtDueDate_Major',
+DSSViewName='vTOHRTable'
+where RiskThemeId=11 
+and MetricId=1
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='TOHR_Open_Issues_ExtDueDate_Significant',
+DSSViewName='vTOHRTable'
+where RiskThemeId=11 
+and MetricId=2
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='CHNG_PM_Milestones_RedAmber',
+DSSViewName='vCHNG_PM_Milestones'
+where MaterialRiskId=5
+and RiskThemeId=23 
+and MetricId in (1133)
+
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='CHNG_PM_PMRisks',
+DSSViewName='vCHNG_PM_PMRisks'
+where MaterialRiskId=5
+and RiskThemeId=23 
+and MetricId in (1134)
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='CHNG_PM_PMIssues',
+DSSViewName='vCHNG_PM_PMIssues'
+where MaterialRiskId=5
+and RiskThemeId=23 
+and MetricId in (1135)
+
+update mcrt..tblRASMetrics
+set TierId=null,IsPerformanceAutomated=1,
+PowerBIReportPage='CHNG_AdhrChngPOL_Release',
+DSSViewName='vCHNG_AdhrChngPOL'
+where MaterialRiskId=5
+and RiskThemeId=22 and MetricId in (77)
+
+update mcrt..tblRASMetrics
+set TierId=2,IsPerformanceAutomated=1,
+PowerBIReportPage='ITS_AVL_App_Tier',
+DSSViewName='vITS_AVL_App'
+where MaterialRiskId=3
+and RiskThemeId=15 and MetricId=65
+
+alter table tblRASMetrics
+add DSSViewName varchar(128)
+
+
+aLter Proc GetPowerBIDSSReportModelByMetricId --GetPowerBIDSSReportModelByMetricId 893
+@RasMetricId int
+AS
+BEGIN
+Select 
+Isnull(RM.ZoneContextId,0) as ZoneContextId,
+Isnull(RM.RegionId,0) as RegionId,tr.Region as RegionName,
+Isnull(RM.SLTId,0) as SLTId,ts.SLTName,
+Isnull(RM.TierId,0) as TierId,
+RM.PowerBIReportPage,RM.DSSViewName,RM.PowerBIReportId
+from tblRASMetrics RM left outer join tblRegion tr
+on Isnull(RM.RegionId,0)=tr.RegionId
+left outer join tblSLTs ts on Isnull(RM.SLTId,0)=ts.ContentId
+Where RM.ContentId=@RasMetricId;
+End
+
+update tblRASMetrics set PowerBIReportId='f2086250-bf24-4c19-9f79-0485ac564c8d'
+where IsPerformanceAutomated=1
+
+
+
+select * from mcrt..tblRASMetrics 
+where DSSViewName='vITS_AVL_App' and TierId=0
+update mcrt..tblRASMetrics  set DSSViewName='vITS_AVL_App',
+PowerBIReportPage='ITS_AVL_App_NWM' 
+where DSSViewName='vITS_AVL_App' and PowerBIReportPage<>'ITS_AVL_App_NWM'
