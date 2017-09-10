@@ -82,3 +82,397 @@ BEGIN
 PRINT 'WeekKey Not Provided'; 
 END 
 END
+
+
+
+
+
+------------
+
+
+CREATE PROC PublishRASByWeekKey
+@WeekKey varchar(50),@CreatedBy varchar(50),
+@Error int = null Out,
+@ErrorMsg varchar(512) =null Out
+AS
+  BEGIN
+    SET XACT_ABORT  ON
+    SET NOCOUNT ON
+    
+    BEGIN TRY
+      BEGIN TRAN
+
+SET @Error=0;
+Declare @Iterator int, @TotalRows int;
+
+IF(Len(Isnull(@WeekKey,''))>0)
+BEGIN
+SELECT ROW_NUMBER() over (order by T1.ContentId ASC) as RowId
+      ,T1.[RasMetricId]
+      ,T1.[InputPerformanceValue]
+      ,T1.[NoOfRecords]
+      ,T1.[RegionWiseKRIPerformance]
+      ,T1.[RagFlag]
+      ,T1.[KRIRemark]
+      ,T1.[PerformanceInfo]
+      ,T1.[WeekKey],
+	  RM.DimensionId,
+	  Isnull(RMP.ContentId,0) as PerformanceId,
+	  CASE WHEN (select count(1) from
+	   MCRT..tblMetricWiseRiskAppetiteLimit where RasmetricId=T1.RasMetricId
+	   and LTRIM(RTRIM([WeekKey]))=LTRIM(RTRIM(T1.[WeekKey])) and Isnull(IsActive,0)=1)>0 
+	   then 1 else 0 end as HasAppetiteLimit
+	   into #tempPublishRAS
+  FROM [MCRT_DS].[dbo].[tblRasmetricPerformance_Stage] AS T1
+  join MCRT..tblRASMetrics RM on T1.RasMetricId = RM.ContentId
+  Left outer join MCRT..tblRasMetricPerformance RMP on T1.RasMetricId=RMP.RasMetricId
+  and LTRIM(RTRIM(T1.[WeekKey]))=LTRIM(RTRIM(RMP.[WeekKey]))
+  Left outer join MCRT..tblMetricWiseRiskAppetiteLimit RAL on T1.RasMetricId=RAL.RasMetricId
+  and LTRIM(RTRIM(T1.[WeekKey]))=LTRIM(RTRIM(RAL.[WeekKey]))
+  WHERE LTRIM(RTRIM(T1.[WeekKey]))=@WeekKey;
+
+
+  -----Add Performance Data for LAst Week
+  RASPerformanceCheck:
+  If EXISTS (select top 1 1 from #tempPublishRAS WHERE ISNULL(PerformanceId,0)=0)
+  BEGIN
+  Print 'Entered RASPerformanceCheck';
+ GOTO RasPerformanceMapping;
+  END
+
+  ------------------------Sub Routine --------------------------
+  RasPerformanceMapping:
+  Print 'Entered RasPerformanceMapping';
+   Insert into MCRT..tblRasMetricPerformance([RasmetricId]
+      ,[KRIPerformance]
+      ,[KRI_Performance_RawValue]
+      ,[KRI_Performance_NoOfRecords]
+      ,[RAGId]
+      ,[KRIRemark]
+      ,[CreatedDate]
+      ,[CreatedBy]  
+      ,[KRI_Potential]
+      ,[Actual_Potential]
+      ,[KRI_Score]
+      ,[DQ_Score]
+      ,[KRI_DQ_Score]
+      ,[IsActive]
+      ,[WeekKey]
+      ,[DataSource]
+      ,[DataOwner]
+      ,[DataSourceMode]
+      ,[BankWideTool]
+      ,[WeighingId]
+      ,[KRI_DQ])
+
+	  SELECT TempT.[RasmetricId]
+      ,T2.[KRIPerformance]
+      ,T2.[KRI_Performance_RawValue]
+      ,T2.[KRI_Performance_NoOfRecords]
+      ,T2.[RAGId]
+      ,T2.[KRIRemark]
+      ,GETUTCDATE()
+      ,@CreatedBy  
+      ,T2.[KRI_Potential]
+      ,T2.[Actual_Potential]
+      ,T2.[KRI_Score]
+      ,T2.[DQ_Score]
+      ,T2.[KRI_DQ_Score]
+      ,1
+      ,LTRIM(RTRIM(@WeekKey))
+      ,T2.[DataSource]
+      ,T2.[DataOwner]
+      ,T2.[DataSourceMode]
+      ,T2.[BankWideTool]
+      ,T2.[WeighingId]
+      ,T2.[KRI_DQ]
+  FROM #tempPublishRAS TempT
+   Left outer join [MCRT]..[tblRasMetricPerformance] T2 on 
+   TempT.[RasMetricId]=T2.[RasMetricId] and 
+   T2.ContentId = (Select max(ContentId) from 
+   [MCRT]..[tblRasMetricPerformance] where [RasMetricId]=TempT.[RasMetricId])
+   WHERE ISNULL(TempT.PerformanceId,0)=0;
+
+   Update TempT SET TempT.PerformanceId=RMP.ContentId
+   from #tempPublishRAS TempT  
+   Left outer join MCRT..tblRasMetricPerformance RMP on TempT.RasMetricId=RMP.RasMetricId
+  and LTRIM(RTRIM(@WeekKey))=LTRIM(RTRIM(RMP.[WeekKey]))
+   WHERE ISNULL(TempT.PerformanceId,0)=0;
+    
+   GOTO RASPerformanceCheck;
+----------------------------------------------------------------------------
+
+
+-----Add Risk Appetite Limit for LAst Week
+  RiskAppetiteLimitCheck:
+  If EXISTS (select top 1 1 from #tempPublishRAS WHERE ISNULL(HasAppetiteLimit,0)=0)
+  BEGIN
+   Print 'Entered RiskAppetiteLimitCheck';
+ GOTO RiskAppetiteLimitMapping;
+  END
+
+--------------------------Sub Routine----------------------------------------------
+  RiskAppetiteLimitMapping:
+  Print 'Entered RiskAppetiteLimitMapping';
+  Insert into MCRT..tblMetricWiseRiskAppetiteLimit([RasMetricId]
+      ,[RA_Red_Opt1]
+      ,[RA_Red_Val1]
+      ,[RA_Red_Opt2]
+      ,[RA_Red_Val2]
+      ,[RA_Amber_Opt1]
+      ,[RA_Amber_Val1]
+      ,[RA_Amber_Opt2]
+      ,[RA_Amber_Val2]
+      ,[RA_Green_Opt1]
+      ,[RA_Green_Val1]
+      ,[RA_Green_Opt2]
+      ,[RA_Green_Val2]
+      ,[Records_Opt1]
+      ,[Records_Val1]
+      ,[Records_Opt2]
+      ,[Records_Val2]
+      ,[Remark]
+      ,[CreatedBy]
+      ,[CreatedDate]
+      ,[IsActive]
+      ,[WeekKey])
+
+	  SELECT TempT.[RasMetricId]
+      ,T2.[RA_Red_Opt1]
+      ,T2.[RA_Red_Val1]
+      ,T2.[RA_Red_Opt2]
+      ,T2.[RA_Red_Val2]
+      ,T2.[RA_Amber_Opt1]
+      ,T2.[RA_Amber_Val1]
+      ,T2.[RA_Amber_Opt2]
+      ,T2.[RA_Amber_Val2]
+      ,T2.[RA_Green_Opt1]
+      ,T2.[RA_Green_Val1]
+      ,T2.[RA_Green_Opt2]
+      ,T2.[RA_Green_Val2]
+      ,T2.[Records_Opt1]
+      ,T2.[Records_Val1]
+      ,T2.[Records_Opt2]
+      ,T2.[Records_Val2]
+      ,T2.[Remark]
+      ,@CreatedBy
+      ,GETUTCDATE()
+      ,1
+      ,LTRIM(RTRIM(@WeekKey))
+  FROM #tempPublishRAS TempT
+   Left outer join [MCRT]..[tblMetricWiseRiskAppetiteLimit] T2 on 
+   TempT.[RasMetricId]=T2.[RasMetricId] and 
+   LTRIM(RTRIM(T2.WeekKey)) = (Select max(WeekKey) from 
+   [MCRT]..[tblMetricWiseRiskAppetiteLimit]
+    where [RasMetricId]=TempT.[RasMetricId] and ISNULL(IsActive,0)=1)
+	and ISNULL(T2.IsActive,0)=1
+   WHERE ISNULL(TempT.HasAppetiteLimit,0)=0; 
+
+
+    Update TempT SET TempT.HasAppetiteLimit=CASE WHEN (select count(1) from
+	   MCRT..tblMetricWiseRiskAppetiteLimit where RasmetricId=TempT.RasMetricId
+	   and LTRIM(RTRIM([WeekKey]))=LTRIM(RTRIM(@WeekKey)) and Isnull(IsActive,0)=1)>0 
+	   then 1 else 0 end
+   from #tempPublishRAS TempT  
+   WHERE ISNULL(TempT.HasAppetiteLimit,0)=0;
+    
+   GOTO RiskAppetiteLimitCheck;
+------------------------------------------------------------------------------------------------
+
+
+  ----iteration logic 
+
+  Set @Iterator=1;
+	  Select @TotalRows=count(*) from #tempPublishRAS;
+	  set @TotalRows=isnull(@TotalRows,0);
+
+
+DECLARE @RasMetricId int,
+  @PerformanceId int,
+  @DimensionId int,  
+  @InputPerformanceValue float = null,
+  @NoOfRecords int = null,
+  @RegionWiseKRIPerformance varchar(max) = null, --- Array of RegionWise KRI Performances separated by '|',
+  @RagFlag int = null, ---- For dimentionId => 9 , values can 
+                       ---- be 1-Fully aligned(Yes),2-Partially Aligned,3-Not Aligned(No)
+					   ---- For DimensionId =>8 values can be 1-Yes & 3-No.
+					   -----For DimensionId =>3 values can be (R)1, (A)2 , (G)3 
+  @KRIRemark nvarchar(512) =null,
+    @DataSource varchar(128)=null,
+@DataOwner varchar(256)=null,
+@DataSourceMode varchar(50)=null,
+@BankWideTool varchar(50)=null,
+@WeighingId int,
+@KRIDQ int,
+@IsActive int
+
+		   WHILE (@Iterator <= @TotalRows)
+BEGIN
+select @RasMetricId =TempT.RasMetricId,        
+	   @PerformanceId =TempT.PerformanceId,
+	   @DimensionId =TempT.DimensionId,
+	   @InputPerformanceValue=TempT.InputPerformanceValue,
+	   @NoOfRecords =TempT.NoOfRecords,
+		@RegionWiseKRIPerformance =TempT.RegionWiseKRIPerformance,
+		 @RagFlag =TempT.RagFlag,
+		 @KRIRemark =TempT.KRIRemark,
+		 @DataSource =RMP.Datasource,
+		 @DataOwner =RMP.DataOwner,@DataSourceMode=RMP.DataSourceMode,
+		 @BankWideTool=RMP.BankWideTool,@WeighingId=RMP.WeighingId,@KRIDQ=RMP.KRI_DQ,
+		 @IsActive=ISnull(RMP.IsActive,0) from #tempPublishRAS TempT
+		 left outer join MCRT..tblRasMetricPerformance RMP
+		 on TempT.RasMetricId=RMP.RasmetricId and TempT.PerformanceId=RMP.ContentId
+		 and LTRIM(RTRIM(@WeekKey))=LTRIM(RTRIM(RMP.WeekKey)) where 
+		 TempT.RowId=@Iterator;
+
+		 if(@Error =0 and ISNULL(@PerformanceId,0) >0)
+begin
+----Update Rag Value -------------------------------------------
+if(@DimensionId =1 or @DimensionId =2)
+begin
+
+if(@InputPerformanceValue is not null)
+begin
+EXEC MCRT..[UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,
+  @PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, 
+  @RagFlag=@RagFlag, 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+
+else
+begin
+Print 'Input Performance Value Not Provided'
+end
+
+END
+
+if(@DimensionId =4 or @DimensionId =5)
+begin
+if(@InputPerformanceValue is not null and ISNULL(@NoOfRecords,0)>0)
+begin
+
+EXEC MCRT..[UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance, 
+  @RagFlag=@RagFlag,
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy ,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+
+else
+begin
+Print 'KRI Performance Measure / No of Records Not Provided';
+end
+
+END
+
+if(@DimensionId =6 or @DimensionId =7)
+begin
+
+if(ISNULL(@RegionWiseKRIPerformance,'')<>'')
+begin
+EXEC MCRT..[UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance,
+  @RagFlag=@RagFlag, 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy ,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+
+else
+begin
+Print 'Region-wise KRI Performance Measure Not Provided';
+end
+END
+
+if(@DimensionId =8 or @DimensionId =9 or @DimensionId=3)
+begin
+if(ISNULL(@RagFlag,0)>0)
+begin
+EXEC MCRT..[UpdateRagValueByRasMetricId]
+  @RasMetricId =@RasMetricId,@PerformanceId=@PerformanceId,
+  @DimensionId =@DimensionId,  
+  @InputPerformanceValue =@InputPerformanceValue,
+  @NoOfRecords=@NoOfRecords,
+  @RegionWiseKRIPerformance=@RegionWiseKRIPerformance,
+  @RagFlag=@RagFlag, 
+  @KRIRemark=@KRIRemark,
+  @CreatedBy=@CreatedBy,@WeekKey=@WeekKey,
+    @DataSource=@DataSource,
+@DataOwner =@DataOwner,
+@DataSourceMode=@DataSourceMode,
+@BankWideTool=@BankWideTool,
+@WeighingId =@WeighingId,
+@KRIDQ =@KRIDQ,
+@IsActive =@IsActive;
+end
+
+else
+begin
+Print 'KRI Performance Measure / Rag Indicator Not Provided';
+end
+
+END
+----------END of Update RAG Value---------------------------------
+end
+
+	 Set @Iterator = @Iterator + 1;
+END
+
+-----------End of Iteration Logic------------------------------------------------------------
+
+Drop table #tempPublishRAS;
+  END
+  ELSE 
+  BEGIN
+  PRINT 'WeekKey not provided';
+  SET @ErrorMsg='WeekKey not provided';
+  SET @Error=1;
+  END
+
+
+
+
+  COMMIT
+
+    END TRY
+    
+    BEGIN CATCH
+      ROLLBACK TRAN
+      Print ERROR_Message();
+      PRINT 'Something went wrong'
+    END CATCH
+  END
