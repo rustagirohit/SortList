@@ -1,0 +1,84 @@
+CREATE PROC GetNonAutomatedKIsForRASUpload
+@WeekKey varchar(50)
+AS
+BEGIN
+
+If(len(Isnull(@WeekKey,'')) >0)
+BEGIN
+If exists (select top 1 1 from 
+tblRasmetricPerformance where ltrim(rtrim(WeekKey))=@WeekKey)
+BEGIN
+Select RM.ContentId as RasmetricId,
+RM.MaterialRiskId,LTRIM(RTRIM(MR.Name)) as MaterialRisk,RM.RiskThemeId,
+LTRIM(RTRIM(RT.RiskTheme)) as RiskTheme,
+RM.MetricId,LTRIM(RTRIM(M.Metric)) as Metric,
+CASE Isnull(RM.ZoneContextId,0) When 1 then 'Region'
+When 2 then 'SLT' ELSE 'Global' end as Zone,
+CASE Isnull(RM.ZoneContextId,0) 
+When 1 then (Select top 1 Region 
+from tblRegion Where RegionId=RM.RegionId)
+When 2 then (Select top 1 SLTName 
+from tblSLTs Where ContentId=RM.SLTId) ELSE '' end as ZoneContext,
+LTRIM(RTRIM(D.Dimension)) as Dimension,
+RMP.[KRIPerformance],RMP.[KRI_Performance_RawValue],
+RMP.[KRI_Performance_NoOfRecords],CASE WHEN 
+RM.DimensionId in (8,9) 
+then (CASE RMP.[RAGId] WHEN 1 then 3
+WHEN 2 then 2 WHEN 3 then 1 ELSE 0 END)
+WHEN RM.DimensionId=3 then RMP.[RAGId] ELSE NULL END as RAGFlag,
+CASE RMP.[RAGId] WHEN 1 then 'R'
+WHEN 2 then 'A' WHEN 3 then 'G' ELSE 'UNR' END as RAG,
+LTRIM(RTRIM(RMP.[KRIRemark])) as KRIRemark,RMP.[WeekKey]
+from tblRASMetrics RM
+join tblMaterialRisks MR on RM.MaterialRiskId=MR.ContentId
+join tblRiskThemes RT on RM.RiskThemeId=RT.ContentId
+join tblMetrics M on RM.MetricId=M.ContentId
+join tblRiskAppetiteDimensions D on RM.DimensionId=D.contentid
+join tblRasmetricPerformance RMP on RM.contentid=RMP.RasMetricId 
+and ltrim(rtrim(RMP.WeekKey))=@WeekKey
+where Isnull(RMP.IsActive,0)=1 and Isnull(RM.IsPerformanceAutomated,0)=0
+Order by RM.MaterialRiskId,RM.RiskThemeId,RM.MetricId,RM.ZoneContextId
+end
+ELSE
+BEGIN
+
+Select RM.ContentId as RasmetricId,
+RM.MaterialRiskId,LTRIM(RTRIM(MR.Name)) as MaterialRisk,RM.RiskThemeId,
+LTRIM(RTRIM(RT.RiskTheme)) as RiskTheme,
+RM.MetricId,LTRIM(RTRIM(M.Metric)) as Metric,
+CASE Isnull(RM.ZoneContextId,0) When 1 then 'Region'
+When 2 then 'SLT' ELSE 'Global' end as Zone,
+CASE Isnull(RM.ZoneContextId,0) 
+When 1 then (Select top 1 Region 
+from tblRegion Where RegionId=RM.RegionId)
+When 2 then (Select top 1 SLTName 
+from tblSLTs Where ContentId=RM.SLTId) ELSE '' end as ZoneContext,
+LTRIM(RTRIM(D.Dimension)) as Dimension,
+RMP.[KRIPerformance],RMP.[KRI_Performance_RawValue],
+RMP.[KRI_Performance_NoOfRecords],CASE WHEN 
+RM.DimensionId in (8,9) 
+then (CASE RMP.[RAGId] WHEN 1 then 3
+WHEN 2 then 2 WHEN 3 then 1 ELSE 0 END)
+WHEN RM.DimensionId=3 then RMP.[RAGId] ELSE NULL END as RAGFlag,
+CASE RMP.[RAGId] WHEN 1 then 'R'
+WHEN 2 then 'A' WHEN 3 then 'G' ELSE 'UNR' END as RAG,
+LTRIM(RTRIM(RMP.[KRIRemark])) as KRIRemark,@WeekKey as [WeekKey]
+from tblRASMetrics RM
+join tblMaterialRisks MR on RM.MaterialRiskId=MR.ContentId
+join tblRiskThemes RT on RM.RiskThemeId=RT.ContentId
+join tblMetrics M on RM.MetricId=M.ContentId
+join tblRiskAppetiteDimensions D on RM.DimensionId=D.contentid
+join tblRasmetricPerformance RMP on RM.contentid=RMP.RasMetricId 
+and ltrim(rtrim(RMP.WeekKey))=(Select Max(WeekKey) from 
+tblRasmetricPerformance where Isnull(IsActive,0)=1)
+where Isnull(RMP.IsActive,0)=1 and Isnull(RM.IsPerformanceAutomated,0)=0
+Order by RM.MaterialRiskId,RM.RiskThemeId,RM.MetricId,RM.ZoneContextId
+
+END
+
+END
+ELSE
+BEGIN
+PRINT 'WeekKey Not Provided'; 
+END 
+END
