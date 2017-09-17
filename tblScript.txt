@@ -1,0 +1,28 @@
+CREATE TABLE [dbo].[tblMCRTAccessRequests](
+	[ContentId] [int] IDENTITY(1,1) NOT NULL,
+	[RacfId] [varchar](50) NULL,
+	[BusinessJustification] [nvarchar](512) NULL,
+	[CreatedDate] [datetime] NULL,
+	[CreatedBy] [varchar](50) NULL,
+	[ModifiedDate] [datetime] NULL,
+	[ModifiedBy] [varchar](50) NULL,
+	[Status] [int] NULL,
+	[Remark] [nvarchar](512) NULL
+) ON [PRIMARY]
+
+GO
+
+SET ANSI_PADDING OFF
+GO
+
+ALTER TABLE [dbo].[tblMCRTAccessRequests] ADD  CONSTRAINT [DF_tblMCRTAccessRequests_CreatedDate]  DEFAULT (getutcdate()) FOR [CreatedDate]
+GO
+
+ALTER TABLE [dbo].[tblMCRTAccessRequests] ADD  CONSTRAINT [DF_tblMCRTAccessRequests_Status]  DEFAULT ((0)) FOR [Status]
+GO
+
+
+
+------------------------------------------*X*X*X*X*X*------------------------------------
+
+
